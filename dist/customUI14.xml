@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="OnRibbonLoad">
+  <ribbon>
+    <tabs>
+      <tab id="dakeTab" label="DakeSCI Clone" insertAfterMso="TabHome">
+        <group id="dakeGroup" label="DakeSCI 1.2 (clone)">
+          <button id="btnTrimPNG"    label="Trim PNG"      size="large" imageMso="PictureCrop"      onAction="OnTrimPNG"      screentip="Auto-crop blank margins from selected PNG files" />
+          <button id="btnGenTable"   label="Generate Table" size="large" imageMso="TableInsertExcel" onAction="OnGenTable"     screentip="Insert a table from CSV / Markdown / plain text" />
+          <button id="btnLayerStack" label="Layer Stack"   size="large" imageMso="ObjectsAlignLeftVertical" onAction="OnLayerStack" screentip="Draw stacked rectangles with arrows" />
+          <button id="btnMatrix"     label="Matrix Offset" size="large" imageMso="TableSelect"      onAction="OnMatrixGrid"   screentip="Draw a matrix grid with per-row offset" />
+          <button id="btnTableImg"   label="Table Images"  size="large" imageMso="PictureReset"     onAction="OnTableImages"  screentip="Insert images into table cells preserving aspect ratio" />
+          <button id="btnAddIcon"    label="Add Icon"      size="large" imageMso="ShapesMoreShapes" onAction="OnAddIcon"      screentip="Add a named icon to the current slide" />
+          <button id="btnVersion"    label="About"         size="large" imageMso="Info"             onAction="OnShowVersion"  screentip="Show version + release date" />
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>

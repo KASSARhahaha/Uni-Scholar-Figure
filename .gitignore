@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+build/
+
+# Generated artifacts
+demo.pptx
+preview/
+icon-*.svg
+DakeSCI-Clone-*.zip
+
+# OS
+.DS_Store
+Thumbs.db
