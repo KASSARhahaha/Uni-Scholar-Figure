@@ -60,6 +60,128 @@ Public Sub OnShowVersion(Optional control As IRibbonControl)
 End Sub
 
 '==========================================================================
+' Bonus: Generate Demo — builds a 3-slide showcase exercising all features
+'==========================================================================
+Public Sub OnGenerateDemo(Optional control As IRibbonControl)
+    Dim pres As Object
+    Set pres = Application.Presentations.Add(msoTrue)
+
+    ' Slide 1: Title + table + icons (Features 2 + 6)
+    Dim s1 As Object
+    Set s1 = pres.Slides.Add(1, 1)  ' 1 = ppLayoutTitle
+    s1.Shapes(1).TextFrame.TextRange.Text = "DakeSCI Clone Demo"
+    s1.Shapes(2).TextFrame.TextRange.Text = "v" & DAKE_VERSION & "  (" & DAKE_RELEASE & ")"
+
+    ' Table on slide 1
+    Dim tbl As Object
+    Set tbl = s1.Shapes.AddTable(3, 4, 60, 250, 800, 90).Table
+    tbl.Cell(1, 1).Shape.TextFrame.TextRange.Text = "Method"
+    tbl.Cell(1, 2).Shape.TextFrame.TextRange.Text = "Precision"
+    tbl.Cell(1, 3).Shape.TextFrame.TextRange.Text = "Recall"
+    tbl.Cell(1, 4).Shape.TextFrame.TextRange.Text = "F1"
+    tbl.Cell(2, 1).Shape.TextFrame.TextRange.Text = "Baseline"
+    tbl.Cell(2, 2).Shape.TextFrame.TextRange.Text = "0.82"
+    tbl.Cell(2, 3).Shape.TextFrame.TextRange.Text = "0.79"
+    tbl.Cell(2, 4).Shape.TextFrame.TextRange.Text = "0.80"
+    tbl.Cell(3, 1).Shape.TextFrame.TextRange.Text = "Ours"
+    tbl.Cell(3, 2).Shape.TextFrame.TextRange.Text = "0.91"
+    tbl.Cell(3, 3).Shape.TextFrame.TextRange.Text = "0.88"
+    tbl.Cell(3, 4).Shape.TextFrame.TextRange.Text = "0.89"
+
+    ' Sample icons
+    Dim iconNames As Variant
+    iconNames = Array("check", "info", "warning", "lightbulb", "search", "gear")
+    Dim i As Long
+    For i = LBound(iconNames) To UBound(iconNames)
+        Dim shp As Object
+        Set shp = s1.Shapes.AddShape(9, 720 + (i Mod 3) * 50, 380 + (i \ 3) * 50, 36, 36)
+        shp.Fill.ForeColor.RGB = RGB(&H1F, &H4E, &H79)
+        shp.Line.Fill.Visible = msoFalse
+        shp.TextFrame.TextRange.Text = CStr(iconNames(i))
+        shp.TextFrame.TextRange.Font.Size = 8
+        shp.TextFrame.TextRange.Font.Color.RGB = RGB(255, 255, 255)
+        shp.TextFrame.TextRange.ParagraphFormat.Alignment = 3
+    Next i
+
+    ' Slide 2: Layer Stack (Feature 3)
+    Dim s2 As Object
+    Set s2 = pres.Slides.Add(2, 2)  ' 2 = ppLayoutText
+    s2.Shapes(1).TextFrame.TextRange.Text = "Architecture (Feature 3)"
+    Dim layers As String
+    layers = "Presentation|Application|Business Logic|Data Access|Storage"
+    Dim layerArr() As String
+    layerArr = Split(layers, "|")
+    Dim n As Long
+    n = UBound(layerArr) + 1
+    Dim boxW As Single, boxH As Single, gap As Single
+    boxW = 468: boxH = 50: gap = 14
+    Dim left As Single, top As Single
+    left = (pres.PageSetup.SlideWidth - boxW) / 2
+    top = 130
+    Dim palette(0 To 6) As Long
+    palette(0) = PAL1: palette(1) = PAL2: palette(2) = PAL3
+    palette(3) = PAL4: palette(4) = PAL5: palette(5) = PAL6: palette(6) = PAL7
+    For i = 0 To n - 1
+        Dim shapeTop As Single
+        shapeTop = top + i * (boxH + gap)
+        Dim shp2 As Object
+        Set shp2 = s2.Shapes.AddShape(5, left, shapeTop, boxW, boxH)
+        shp2.Fill.ForeColor.RGB = palette(i Mod 7)
+        shp2.Line.ForeColor.RGB = RGB(&H33, &H33, &H33)
+        shp2.TextFrame.TextRange.Text = layerArr(i)
+        shp2.TextFrame.TextRange.Font.Size = 16
+        shp2.TextFrame.TextRange.Font.Bold = msoTrue
+        shp2.TextFrame.TextRange.Font.Color.RGB = RGB(255, 255, 255)
+        shp2.TextFrame.TextRange.ParagraphFormat.Alignment = 3
+        If i < n - 1 Then
+            Dim arrow As Object
+            Set arrow = s2.Shapes.AddShape(35, left + (boxW - 12) / 2, shapeTop + boxH, 12, 12)
+            arrow.Fill.ForeColor.RGB = RGB(&H66, &H66, &H66)
+            arrow.Line.Fill.Visible = msoFalse
+        End If
+    Next i
+
+    ' Slide 3: Matrix Grid (Feature 4)
+    Dim s3 As Object
+    Set s3 = pres.Slides.Add(3, 2)
+    s3.Shapes(1).TextFrame.TextRange.Text = "Matrix Offset (Feature 4)"
+    Dim nRows As Long, nCols As Long
+    nRows = 3: nCols = 5
+    Dim cellSize As Single, sgap As Single
+    cellSize = 60: sgap = 8
+    Dim stride As Single
+    stride = cellSize + sgap
+    Dim offset As Single
+    offset = 30
+    Dim totalW As Single
+    totalW = nCols * stride + Abs(offset)
+    Dim startLeft As Single
+    startLeft = (pres.PageSetup.SlideWidth - totalW) / 2
+    Dim r As Long, c As Long
+    For r = 0 To nRows - 1
+        Dim dx As Single
+        dx = IIf(r Mod 2 = 1, offset, 0)
+        For c = 0 To nCols - 1
+            Dim ms As Object
+            Set ms = s3.Shapes.AddShape(5, _
+                startLeft + dx + c * stride, _
+                150 + r * stride, _
+                cellSize, cellSize)
+            ms.Fill.ForeColor.RGB = PAL1
+            ms.Line.ForeColor.RGB = RGB(255, 255, 255)
+            ms.TextFrame.TextRange.Text = r & "," & c
+            ms.TextFrame.TextRange.Font.Size = 10
+            ms.TextFrame.TextRange.Font.Color.RGB = RGB(255, 255, 255)
+            ms.TextFrame.TextRange.ParagraphFormat.Alignment = 3
+        Next c
+    Next r
+
+    MsgBox "Demo generated: 3 slides exercising Features 2, 3, 4, 6." & vbCrLf & _
+           "Other features (PNG Trim, Table Images) need files — try them on your own." & vbCrLf & vbCrLf & _
+           "DakeSCI Clone v" & DAKE_VERSION, vbInformation, "Demo"
+End Sub
+
+'==========================================================================
 ' Feature 1: PNG blank-margin auto-trim
 '==========================================================================
 Public Sub TrimPNGFiles()
@@ -620,7 +742,7 @@ End Sub
 '==========================================================================
 Public Sub AddIconToSlide()
     Dim icons As String
-    icons = "check|cross|arrow-right|arrow-down|info|warning|lightbulb|search|gear|doc"
+    icons = "check|cross|arrow-right|arrow-down|arrow-up|arrow-left|info|warning|lightbulb|search|gear|doc|book|chart|code|brain|atom|dna|microscope|beaker|flask|graph|database|server|cloud|lock|key|flag|star|heart|thumbsup|link|mail|phone|calendar|clock|user|team|settings|trash|edit|save|download|upload|copy|paste|filter|sort|expand|collapse|play|pause|stop|forward|backward"
     Dim name As String
     name = InputBox("Icon name. Available:" & vbCrLf & Replace(icons, "|", ", "), _
                     "Add Icon", "warning")

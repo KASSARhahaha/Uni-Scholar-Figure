@@ -11,6 +11,7 @@
           <button id="btnTableImg"   label="Table Images"  size="large" imageMso="PictureReset"     onAction="OnTableImages"  screentip="Insert images into table cells preserving aspect ratio" />
           <button id="btnAddIcon"    label="Add Icon"      size="large" imageMso="ShapesMoreShapes" onAction="OnAddIcon"      screentip="Add a named icon to the current slide" />
           <button id="btnVersion"    label="About"         size="large" imageMso="Info"             onAction="OnShowVersion"  screentip="Show version + release date" />
+          <button id="btnDemo"       label="Generate Demo" size="large" imageMso="BlogHomePage"     onAction="OnGenerateDemo" screentip="Build a 3-slide showcase exercising all features" />
         </group>
       </tab>
     </tabs>
