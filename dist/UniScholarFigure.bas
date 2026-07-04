@@ -1,6 +1,6 @@
-Attribute VB_Name = "DakeSCI"
+Attribute VB_Name = "UniScholarFigure"
 '==========================================================================
-' DakeSCI 1.2 Clean-Room Clone — VBA Module
+' UniScholarFigure 1.2 Clean-Room Clone — VBA Module
 ' Version: 1.2.0   Release: 2026-07-03
 '
 ' Ribbon callbacks (called from customUI14.xml):
@@ -12,8 +12,8 @@ Attribute VB_Name = "DakeSCI"
 '==========================================================================
 Option Explicit
 
-Public Const DAKE_VERSION As String = "1.2.0"
-Public Const DAKE_RELEASE As String = "2026-07-03"
+Public Const UNISFIG_VERSION As String = "1.2.0"
+Public Const UNISFIG_RELEASE As String = "2026-07-03"
 
 ' ---- Color palette for layer-stack and matrix ----
 Private Const PAL1 As Long = &HC6864F   ' blue (BGR)
@@ -53,10 +53,10 @@ Public Sub OnAddIcon(Optional control As IRibbonControl)
 End Sub
 
 Public Sub OnShowVersion(Optional control As IRibbonControl)
-    MsgBox "DakeSCI Clone" & vbCrLf & _
-           "Version: " & DAKE_VERSION & vbCrLf & _
-           "Release: " & DAKE_RELEASE, _
-           vbInformation, "About DakeSCI Clone"
+    MsgBox "Uni-Scholar Figure" & vbCrLf & _
+           "Version: " & UNISFIG_VERSION & vbCrLf & _
+           "Release: " & UNISFIG_RELEASE, _
+           vbInformation, "About Uni-Scholar Figure"
 End Sub
 
 '==========================================================================
@@ -69,8 +69,8 @@ Public Sub OnGenerateDemo(Optional control As IRibbonControl)
     ' Slide 1: Title + table + icons (Features 2 + 6)
     Dim s1 As Object
     Set s1 = pres.Slides.Add(1, 1)  ' 1 = ppLayoutTitle
-    s1.Shapes(1).TextFrame.TextRange.Text = "DakeSCI Clone Demo"
-    s1.Shapes(2).TextFrame.TextRange.Text = "v" & DAKE_VERSION & "  (" & DAKE_RELEASE & ")"
+    s1.Shapes(1).TextFrame.TextRange.Text = "Uni-Scholar Figure Demo"
+    s1.Shapes(2).TextFrame.TextRange.Text = "v" & UNISFIG_VERSION & "  (" & UNISFIG_RELEASE & ")"
 
     ' Table on slide 1
     Dim tbl As Object
@@ -178,7 +178,7 @@ Public Sub OnGenerateDemo(Optional control As IRibbonControl)
 
     MsgBox "Demo generated: 3 slides exercising Features 2, 3, 4, 6." & vbCrLf & _
            "Other features (PNG Trim, Table Images) need files — try them on your own." & vbCrLf & vbCrLf & _
-           "DakeSCI Clone v" & DAKE_VERSION, vbInformation, "Demo"
+           "Uni-Scholar Figure v" & UNISFIG_VERSION, vbInformation, "Demo"
 End Sub
 
 '==========================================================================

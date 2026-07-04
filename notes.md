@@ -1,4 +1,4 @@
-# Notes — DakeSCI behavior guesses
+# Notes — UniScholarFigure behavior guesses
 
 ## What the website confirms
 - ¥99/device PPT add-in, 兑换码→机器码→激活码 licensing

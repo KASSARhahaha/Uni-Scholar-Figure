@@ -1,4 +1,4 @@
-# DakeSCI Clone — Windows Installer (PowerShell)
+# Uni-Scholar Figure — Windows Installer (PowerShell)
 # Usage: Right-click this file → Run with PowerShell
 # Or from PowerShell:  .\install.ps1
 
@@ -9,14 +9,14 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
 
 Write-Host ""
-Write-Host "DakeSCI Clone v1.2.0 installer" -ForegroundColor Cyan
+Write-Host "Uni-Scholar Figure v1.2.0 installer" -ForegroundColor Cyan
 Write-Host "================================"
 Write-Host ""
 
 # ----- 1. Validate source files -----
-$basisPath  = Join-Path $scriptDir 'DakeSCI.bas'
+$basisPath  = Join-Path $scriptDir 'UniScholarFigure.bas'
 $ribbonPath = Join-Path $scriptDir 'customUI14.xml'
-if (-not (Test-Path $basisPath))  { throw "Missing DakeSCI.bas next to this installer." }
+if (-not (Test-Path $basisPath))  { throw "Missing UniScholarFigure.bas next to this installer." }
 if (-not (Test-Path $ribbonPath)) { throw "Missing customUI14.xml next to this installer." }
 
 # ----- 2. Locate PowerPoint -----
@@ -64,7 +64,7 @@ try {
 # ----- 5. Save as .ppam add-in -----
 $addInDir = Join-Path $env:APPDATA 'Microsoft\AddIns'
 if (-not (Test-Path $addInDir)) { New-Item -ItemType Directory -Path $addInDir -Force | Out-Null }
-$addInPath = Join-Path $addInDir 'DakeSCI.ppam'
+$addInPath = Join-Path $addInDir 'UniScholarFigure.ppam'
 
 # ppSaveAsAddIn = 8
 $pres.SaveAs($addInPath, 8)
@@ -100,7 +100,7 @@ $reader = New-Object System.IO.StreamReader($relsEntry.Open())
 $relsXml = $reader.ReadToEnd()
 $reader.Close()
 if ($relsXml -notmatch 'customUI14\.xml') {
-    $newRel = '<Relationship Id="rIdDakeSCI" Type="http://schemas.microsoft.com/office/2007/relationships/ui/extensibility" Target="customUI/customUI14.xml"/>'
+    $newRel = '<Relationship Id="rIdUniScholarFigure" Type="http://schemas.microsoft.com/office/2007/relationships/ui/extensibility" Target="customUI/customUI14.xml"/>'
     $relsXml = $relsXml -replace '</Relationships>', "$newRel</Relationships>"
     $relsWriter = New-Object System.IO.StreamWriter($relsEntry.Open())
     $relsWriter.Write($relsXml)
@@ -116,7 +116,7 @@ Write-Host "[OK] Injected ribbon XML" -ForegroundColor Green
 
 # ----- 7. Register the add-in for auto-load -----
 $officeVer = '16.0'  # Office 2016/2019/2021/365
-$regBase = "HKCU:\Software\Microsoft\Office\$officeVer\PowerPoint\AddIns\DakeSCI"
+$regBase = "HKCU:\Software\Microsoft\Office\$officeVer\PowerPoint\AddIns\UniScholarFigure"
 if (-not (Test-Path $regBase)) { New-Item -Path $regBase -Force | Out-Null }
 Set-ItemProperty -Path $regBase -Name 'AutoLoad' -Value 1 -Type DWord
 Set-ItemProperty -Path $regBase -Name 'Loaded'  -Value 1 -Type DWord
@@ -126,7 +126,7 @@ Write-Host "[OK] Registered for auto-load" -ForegroundColor Green
 Write-Host ""
 Write-Host "Installation complete!" -ForegroundColor Green
 Write-Host "Restart PowerPoint (or close all presentations and reopen) —" -ForegroundColor Cyan
-Write-Host 'the "DakeSCI Clone" ribbon tab will appear at the top.'
+Write-Host 'the "Uni-Scholar Figure" ribbon tab will appear at the top.'
 Write-Host ""
 Write-Host "To uninstall: run uninstall.ps1"
 Write-Host ""

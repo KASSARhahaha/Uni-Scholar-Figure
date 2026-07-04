@@ -1,6 +1,6 @@
-# DakeSCI Clone — PowerPoint 插件 (Windows + Mac)
+# Uni-Scholar Figure — PowerPoint 插件 (Windows + Mac)
 
-跨平台 DakeSCI 1.2 行为复刻版。Windows 装完直接出 ribbon，Mac 多一步手动启用。
+跨平台 UniScholarFigure 1.2 行为复刻版。Windows 装完直接出 ribbon，Mac 多一步手动启用。
 
 ## 版本
 - v1.2.0
@@ -31,7 +31,7 @@
      Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
      ```
 5. 看到三次绿色 `[OK]` 即成功
-6. 打开 PowerPoint → 顶部出现 "DakeSCI Clone" 选项卡
+6. 打开 PowerPoint → 顶部出现 "Uni-Scholar Figure" 选项卡
 
 ## 安装 — Mac
 
@@ -54,7 +54,7 @@ pip3 install Pillow
 
 它会：
 - 检测 Python3 + Pillow
-- 把 `DakeSCI.bas` 拷到 `~/Library/Group Containers/UBF8T346G9.Office/UserContent/Add-Ins/`
+- 把 `UniScholarFigure.bas` 拷到 `~/Library/Group Containers/UBF8T346G9.Office/UserContent/Add-Ins/`
 - 在 Finder 打开这个文件夹方便后续操作
 
 ### 第 2 步：在 PowerPoint 里启用（一次性手动）
@@ -63,23 +63,23 @@ pip3 install Pillow
 1. 打开 PowerPoint → 新建空白文稿
 2. 文件 → 另存为 → PowerPoint Macro-Enabled 演示文稿（.pptm）
 3. 按 `Option+F11` 打开 VBA 编辑器
-4. 文件 → 导入文件... → 选刚才 installer 拷过去的 `DakeSCI.bas`
+4. 文件 → 导入文件... → 选刚才 installer 拷过去的 `UniScholarFigure.bas`
 5. 关闭 VBA 编辑器，保存 .pptm
-6. 以后要用 DakeSCI 功能就打开这个 .pptm
+6. 以后要用 UniScholarFigure 功能就打开这个 .pptm
    - 注意：.pptm 模式下 ribbon 只在文档开着时显示
    - 想永久 ribbon：需要用 Windows 跑 install.ps1 生成 .ppam，把 .ppam 拷回 Mac，再跑一次 install-mac.command
 
-**情况 B — 你已经在 Windows 装过了，把 DakeSCI.ppam 拷到 Mac**：
-1. 在 Windows：%APPDATA%\Microsoft\AddIns\DakeSCI.ppam
+**情况 B — 你已经在 Windows 装过了，把 UniScholarFigure.ppam 拷到 Mac**：
+1. 在 Windows：%APPDATA%\Microsoft\AddIns\UniScholarFigure.ppam
 2. 把它拷到这个 dist 目录（与 install-mac.command 同级）
 3. 重新跑 install-mac.command → 它会自动把 .ppam 装到 Mac AddIns 目录
-4. 打开 PowerPoint → 工具 → PowerPoint 加载项 → 添加 → 选 DakeSCI.ppam
-5. 重启 PowerPoint，"DakeSCI Clone" 选项卡永久出现
+4. 打开 PowerPoint → 工具 → PowerPoint 加载项 → 添加 → 选 UniScholarFigure.ppam
+5. 重启 PowerPoint，"Uni-Scholar Figure" 选项卡永久出现
 
 ## 卸载
 
 - Windows：右键 `uninstall.ps1` → 用 PowerShell 运行
-- Mac：删除 `~/Library/Group Containers/UBF8T346G9.Office/UserContent/Add-Ins/DakeSCI.*` 即可
+- Mac：删除 `~/Library/Group Containers/UBF8T346G9.Office/UserContent/Add-Ins/UniScholarFigure.*` 即可
 
 ## 系统要求
 
@@ -92,7 +92,7 @@ pip3 install Pillow
 
 ```
 dist/
-├── DakeSCI.bas            # VBA 主模块（跨平台，含 #If Mac Then 分支）
+├── UniScholarFigure.bas            # VBA 主模块（跨平台，含 #If Mac Then 分支）
 ├── customUI14.xml         # ribbon 定义
 ├── install.ps1            # Windows 一键安装器
 ├── install-mac.command    # Mac 一键安装器
@@ -112,7 +112,7 @@ A: 装 Python3 + Pillow。一行命令：`pip3 install Pillow`（前提是已 `b
 **Q: 安装成功但 ribbon 没出现**
 A: 完全关闭 PowerPoint（任务管理器查 POWERPNT.EXE / Mac 活动监视器查 Microsoft PowerPoint），重开。
 
-**Q: 与原版 DakeSCI 1.2 是否冲突**
+**Q: 与原版 UniScholarFigure 1.2 是否冲突**
 A: 不冲突。ribbon 标签、注册表项、AddIns 文件名都不同。
 
 **Q: 杀软报毒 / Mac Gatekeeper 拦截**
@@ -127,5 +127,5 @@ A: 误报。脚本明文可读可审计。Mac 首次运行 `.command` 文件可�
 
 ## 反馈
 
-源码：`/home/yangkai/00-make-money/dakesci-clone/`
+源码：`/home/yangkai/00-make-money/Uni-Scholar-Figure/`
 Python CLI 同源实现：`dake --help`（同目录 .venv 已配置）

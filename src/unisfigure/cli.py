@@ -1,4 +1,4 @@
-"""Top-level CLI: dake <command> [opts]."""
+"""Top-level CLI: unisfig <command> [opts]."""
 from __future__ import annotations
 
 import sys
@@ -15,8 +15,8 @@ from .table_images import fill_table_with_images
 from .trim_png import trim_many, trim_one
 
 app = typer.Typer(
-    name="dake",
-    help=f"DakeSCI 1.2 clean-room CLI clone (v{__version__}, released {RELEASE_DATE})",
+    name="unisfig",
+    help=f"Uni-Scholar Figure (v{__version__}, released {RELEASE_DATE})",
     no_args_is_help=True,
     rich_markup_mode="rich",
 )
@@ -25,7 +25,7 @@ app = typer.Typer(
 @app.command()
 def version() -> None:
     """Show version + unified release date (feature 7)."""
-    typer.echo(f"dake v{__version__}  (release: {RELEASE_DATE})")
+    typer.echo(f"unisfig v{__version__}  (release: {RELEASE_DATE})")
 
 
 @app.command("trim-png")

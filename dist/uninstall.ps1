@@ -1,20 +1,20 @@
-# DakeSCI Clone — Uninstaller
+# Uni-Scholar Figure — Uninstaller
 #Requires -Version 5
 
 $ErrorActionPreference = 'SilentlyContinue'
 
 Write-Host ""
-Write-Host "DakeSCI Clone uninstaller" -ForegroundColor Cyan
+Write-Host "Uni-Scholar Figure uninstaller" -ForegroundColor Cyan
 Write-Host "=========================="
 Write-Host ""
 
-$addInPath = Join-Path $env:APPDATA 'Microsoft\AddIns\DakeSCI.ppam'
+$addInPath = Join-Path $env:APPDATA 'Microsoft\AddIns\UniScholarFigure.ppam'
 
 # Try to unload from a running PowerPoint
 try {
     $pp = New-Object -ComObject PowerPoint.Application
     foreach ($a in $pp.AddIns) {
-        if ($a.Name -like 'DakeSCI*') {
+        if ($a.Name -like 'UniScholarFigure*') {
             $a.Registered = $false
             Write-Host "[OK] Unloaded from running PowerPoint" -ForegroundColor Green
         }
@@ -35,7 +35,7 @@ if (Test-Path $addInPath) {
 
 # Clean registry
 $officeVer = '16.0'
-$regBase = "HKCU:\Software\Microsoft\Office\$officeVer\PowerPoint\AddIns\DakeSCI"
+$regBase = "HKCU:\Software\Microsoft\Office\$officeVer\PowerPoint\AddIns\UniScholarFigure"
 if (Test-Path $regBase) {
     Remove-Item $regBase -Recurse -Force
     Write-Host "[OK] Cleaned registry" -ForegroundColor Green

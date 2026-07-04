@@ -1,5 +1,5 @@
 #!/bin/bash
-# DakeSCI Clone — Mac Installer
+# Uni-Scholar Figure — Mac Installer
 # Double-click this file (or run: bash install-mac.command) to set up.
 # After running, you'll need to enable the add-in inside PowerPoint.
 
@@ -9,16 +9,16 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-# ---- Bounce if no DakeSCI.bas ----
-if [[ ! -f "DakeSCI.bas" ]]; then
-    echo "ERROR: DakeSCI.bas not found next to this installer."
+# ---- Bounce if no UniScholarFigure.bas ----
+if [[ ! -f "UniScholarFigure.bas" ]]; then
+    echo "ERROR: UniScholarFigure.bas not found next to this installer."
     echo "       Re-extract the full ZIP and try again."
     open -R "$SCRIPT_DIR"
     exit 1
 fi
 
 echo ""
-echo "DakeSCI Clone v1.2.0 — Mac installer"
+echo "Uni-Scholar Figure v1.2.0 — Mac installer"
 echo "====================================="
 echo ""
 
@@ -62,14 +62,14 @@ echo "  [OK] Add-Ins folder: $TARGET_DIR"
 
 # ---- 3. Copy .bas to AddIns folder (so user can import it from there) ----
 echo ""
-echo "[3/4] Copying DakeSCI.bas to AddIns folder..."
-cp -f DakeSCI.bas "$TARGET_DIR/DakeSCI.bas"
-echo "  [OK] Copied: $TARGET_DIR/DakeSCI.bas"
+echo "[3/4] Copying UniScholarFigure.bas to AddIns folder..."
+cp -f UniScholarFigure.bas "$TARGET_DIR/UniScholarFigure.bas"
+echo "  [OK] Copied: $TARGET_DIR/UniScholarFigure.bas"
 
 # If a pre-built .ppam exists (e.g., transferred from Windows), copy that too
-if [[ -f "DakeSCI.ppam" ]]; then
-    cp -f DakeSCI.ppam "$TARGET_DIR/DakeSCI.ppam"
-    echo "  [OK] Copied pre-built DakeSCI.ppam too"
+if [[ -f "UniScholarFigure.ppam" ]]; then
+    cp -f UniScholarFigure.ppam "$TARGET_DIR/UniScholarFigure.ppam"
+    echo "  [OK] Copied pre-built UniScholarFigure.ppam too"
     HAVE_PPAM=1
 else
     HAVE_PPAM=0
@@ -84,14 +84,14 @@ if [[ "$HAVE_PPAM" -eq 1 ]]; then
     echo "  b. Tools → PowerPoint Add-ins..."
     echo "  c. Click \"+ Add\" or \"Add New\""
     echo "  d. Navigate to: $TARGET_DIR"
-    echo "  e. Select DakeSCI.ppam → Enable"
+    echo "  e. Select UniScholarFigure.ppam → Enable"
 else
     echo "  a. Open PowerPoint and create a Blank Presentation"
     echo "  b. Save As → PowerPoint Macro-Enabled Presentation (.pptm)"
-    echo "     Suggested name: DakeSCI-Loader.pptm (save anywhere you like)"
+    echo "     Suggested name: UniScholarFigure-Loader.pptm (save anywhere you like)"
     echo "  c. Press Option+F11 to open the Visual Basic Editor"
     echo "  d. File → Import File... → select:"
-    echo "       $TARGET_DIR/DakeSCI.bas"
+    echo "       $TARGET_DIR/UniScholarFigure.bas"
     echo "  e. Close the VBA editor"
     echo "  f. Save the .pptm file"
     echo ""
@@ -101,7 +101,7 @@ else
     echo "        and re-run install-mac.command with the .ppam in this folder."
 fi
 echo ""
-echo "  Ribbon tab name: \"DakeSCI Clone\" (appears at the top after restart)"
+echo "  Ribbon tab name: \"Uni-Scholar Figure\" (appears at the top after restart)"
 echo ""
 
 # ---- Open the AddIns folder in Finder for convenience ----

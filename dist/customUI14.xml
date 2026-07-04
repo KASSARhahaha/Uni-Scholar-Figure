@@ -2,8 +2,8 @@
 <customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="OnRibbonLoad">
   <ribbon>
     <tabs>
-      <tab id="dakeTab" label="DakeSCI Clone" insertAfterMso="TabHome">
-        <group id="dakeGroup" label="DakeSCI 1.2 (clone)">
+      <tab id="uniScholarFigureTab" label="Uni-Scholar Figure" insertAfterMso="TabHome">
+        <group id="uniScholarFigureGroup" label="Uni-Scholar Figure 1.2">
           <button id="btnTrimPNG"    label="Trim PNG"      size="large" imageMso="PictureCrop"      onAction="OnTrimPNG"      screentip="Auto-crop blank margins from selected PNG files" />
           <button id="btnGenTable"   label="Generate Table" size="large" imageMso="TableInsertExcel" onAction="OnGenTable"     screentip="Insert a table from CSV / Markdown / plain text" />
           <button id="btnLayerStack" label="Layer Stack"   size="large" imageMso="ObjectsAlignLeftVertical" onAction="OnLayerStack" screentip="Draw stacked rectangles with arrows" />

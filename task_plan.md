@@ -1,7 +1,7 @@
-# DakeSCI 1.2 Clean-Room Clone — Task Plan  ✅ DONE
+# UniScholarFigure 1.2 Clean-Room Clone — Task Plan  ✅ DONE
 
 ## Goal
-Reproduce the 7 listed DakeSCI 1.2 behaviors as a Linux-runnable Python CLI.
+Reproduce the 7 listed UniScholarFigure 1.2 behaviors as a Linux-runnable Python CLI.
 NOT a binary crack, NOT a UI clone. Behavior-only clean-room reimplementation.
 
 ## Source of truth (release notes from user)
@@ -16,8 +16,8 @@ NOT a binary crack, NOT a UI clone. Behavior-only clean-room reimplementation.
 ## Platform: Option B
 - Python 3.11 + python-pptx 1.0.2 + Pillow + typer 0.26
 - Runs on Linux, no PowerPoint required
-- venv at `/home/yangkai/00-make-money/dakesci-clone/.venv`
-- Package installed editable as `dakecli`
+- venv at `/home/yangkai/00-make-money/Uni-Scholar-Figure/.venv`
+- Package installed editable as `unisfigure`
 
 ## Status
 - [x] P0 Scaffold

@@ -11,13 +11,13 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from dakecli import RELEASE_DATE, __version__  # noqa: E402
-from dakecli.gen_table import gen_table_from_text  # noqa: E402
-from dakecli.icons import add_icon_to_slide, list_icons  # noqa: E402
-from dakecli.layer_stack import render_layer_stack  # noqa: E402
-from dakecli.matrix_grid import render_matrix  # noqa: E402
-from dakecli.table_images import fill_table_with_images  # noqa: E402
-from dakecli.trim_png import trim_one  # noqa: E402
+from unisfigure import RELEASE_DATE, __version__  # noqa: E402
+from unisfigure.gen_table import gen_table_from_text  # noqa: E402
+from unisfigure.icons import add_icon_to_slide, list_icons  # noqa: E402
+from unisfigure.layer_stack import render_layer_stack  # noqa: E402
+from unisfigure.matrix_grid import render_matrix  # noqa: E402
+from unisfigure.table_images import fill_table_with_images  # noqa: E402
+from unisfigure.trim_png import trim_one  # noqa: E402
 
 SAMPLES = Path(__file__).resolve().parent / "samples"
 SAMPLES.mkdir(exist_ok=True)

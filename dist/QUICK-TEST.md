@@ -1,17 +1,17 @@
-# DakeSCI Clone — Distribution Package
+# Uni-Scholar Figure — Distribution Package
 
-This folder produces `DakeSCI-Clone-v1.2.zip` — a one-click installable
+This folder produces `Uni-Scholar-Figure-v1.2.zip` — a one-click installable
 PowerPoint add-in for Windows.
 
 ## Files
-- `DakeSCI.bas` — VBA module implementing all 7 features (623 lines, pure VBA + GDI+ flat API)
+- `UniScholarFigure.bas` — VBA module implementing all 7 features (623 lines, pure VBA + GDI+ flat API)
 - `customUI14.xml` — ribbon definition with 7 buttons
 - `install.ps1` — PowerShell installer (import VBA, save as .ppam, inject ribbon, register)
 - `uninstall.ps1` — uninstaller
 - `README.md` — user-facing instructions (Chinese)
 
 ## Build artifact
-- `../DakeSCI-Clone-v1.2.zip` (11 KB)
+- `../Uni-Scholar-Figure-v1.2.zip` (11 KB)
 - SHA: see zip itself
 
 ## Validation done
