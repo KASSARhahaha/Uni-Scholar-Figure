@@ -86,8 +86,91 @@ Public Sub TrimPNGFiles()
            IIf(failed > 0, " Failed: " & failed, ""), vbInformation
 End Sub
 
-' Returns True on success. Uses GDI+ flat API.
+' Returns True on success.
 Private Function TrimOnePNG(ByVal filePath As String) As Boolean
+#If Mac Then
+    TrimOnePNG = TrimOnePNGMac(filePath)
+    Exit Function
+#Else
+    TrimOnePNG = TrimOnePNGWin(filePath)
+    Exit Function
+#End If
+End Function
+
+'==========================================================================
+' Mac implementation: shells out to Python3 + Pillow
+'==========================================================================
+#If Mac Then
+Private Function TrimOnePNGMac(ByVal filePath As String) As Boolean
+    On Error GoTo Fail
+    ' Inline Python script — bbox detection + crop using Pillow
+    Dim pyScript As String
+    pyScript = "import sys,os" & vbCrLf & _
+               "from PIL import Image" & vbCrLf & _
+               "p=sys.argv[1]" & vbCrLf & _
+               "im=Image.open(p)" & vbCrLf & _
+               "if im.mode=='RGBA':" & vbCrLf & _
+               "    bg=Image.new('RGBA',im.size,(255,255,255,255))" & vbCrLf & _
+               "    im=Image.alpha_composite(bg,im).convert('RGB')" & vbCrLf & _
+               "else:" & vbCrLf & _
+               "    im=im.convert('RGB')" & vbCrLf & _
+               "g=im.convert('L')" & vbCrLf & _
+               "mask=g.point(lambda v:255 if v<245 else 0)" & vbCrLf & _
+               "b=mask.getbbox()" & vbCrLf & _
+               "if b is None: sys.exit(1)" & vbCrLf & _
+               "pad=2" & vbCrLf & _
+               "b=(max(0,b[0]-pad),max(0,b[1]-pad),min(im.size[0],b[2]+pad),min(im.size[1],b[3]+pad))" & vbCrLf & _
+               "im.crop(b).save(p,'PNG',optimize=True)"
+
+    Dim tmpPath As String
+    tmpPath = "/tmp/dake_trim_" & Format(Now, "yyyymmddhhnnss") & ".py"
+    Dim f As Integer
+    f = FreeFile
+    Open tmpPath For Output As #f
+    Print #f, pyScript
+    Close #f
+
+    ' AppleScript: do shell script — captures stderr + exit code
+    Dim script As String
+    script = "do shell script ""python3 "" & quoted form of """ & tmpPath & """ & "" "" & quoted form of """ & filePath & """ 2>&1"""
+    Dim errMsg As String
+    On Error Resume Next
+    errMsg = MacScript(script)
+    If Err.Number <> 0 Or Len(errMsg) > 0 Then
+        ' Check if it's a "no content" success or real failure
+        If InStr(errMsg, "sys.exit(1)") > 0 Then
+            TrimOnePNGMac = False
+        ElseIf InStr(errMsg, "No module named PIL") > 0 Or InStr(errMsg, "pip3") > 0 Then
+            MsgBox "PNG Trim on Mac requires Python3 + Pillow." & vbCrLf & vbCrLf & _
+                   "Install once with:" & vbCrLf & _
+                   "  brew install python" & vbCrLf & _
+                   "  pip3 install Pillow", vbExclamation, "Setup Required"
+            TrimOnePNGMac = False
+        ElseIf Len(errMsg) = 0 Then
+            TrimOnePNGMac = True
+        Else
+            TrimOnePNGMac = False
+        End If
+    Else
+        TrimOnePNGMac = True
+    End If
+    On Error GoTo 0
+
+    ' Cleanup
+    On Error Resume Next
+    MacScript "do shell script ""rm -f "" & quoted form of """ & tmpPath & """"
+    Exit Function
+
+Fail:
+    TrimOnePNGMac = False
+End Function
+#End If
+
+'==========================================================================
+' Windows implementation: GDI+ flat API
+'==========================================================================
+#If Not Mac Then
+Private Function TrimOnePNGWin(ByVal filePath As String) As Boolean
     On Error GoTo Fail
 
     Dim gdipToken As LongPtr
@@ -133,7 +216,7 @@ Private Function TrimOnePNG(ByVal filePath As String) As Boolean
     If Not foundContent Then
         GdipDisposeImage img
         GdipShutdown gdipToken
-        TrimOnePNG = False
+        TrimOnePNGWin = False
         Exit Function
     End If
 
@@ -165,14 +248,15 @@ Private Function TrimOnePNG(ByVal filePath As String) As Boolean
     GdipDisposeImage img
     GdipDisposeImage dest
     GdipShutdown gdipToken
-    TrimOnePNG = True
+    TrimOnePNGWin = True
     Exit Function
 
 FailCleanup:
     GdipShutdown gdipToken
 Fail:
-    TrimOnePNG = False
+    TrimOnePNGWin = False
 End Function
+#End If
 
 '==========================================================================
 ' Feature 2: Generate Table
@@ -570,8 +654,9 @@ Public Sub AddIconToSlide()
 End Sub
 
 '==========================================================================
-' GDI+ Flat API declarations (used by Feature 1 PNG trim)
+' GDI+ Flat API declarations (used by Feature 1 PNG trim, Windows only)
 '==========================================================================
+#If Not Mac Then
 #If VBA7 Then
     Private Declare PtrSafe Function GdiplusStartup Lib "gdiplus" (token As LongPtr, inputbuf As Any, Optional outputbuf As Any) As Long
     Private Declare PtrSafe Sub GdiplusShutdown Lib "gdiplus" (ByVal token As LongPtr)
@@ -621,3 +706,4 @@ Private Function GdipInit(ByRef token As LongPtr) As Boolean
 End Function
 
 Private Declare PtrSafe Sub ClsidFromString Lib "ole32" (ByVal str As LongPtr, clsid As Any)
+#End If

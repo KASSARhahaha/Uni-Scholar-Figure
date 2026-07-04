@@ -1,81 +1,131 @@
-# DakeSCI Clone — PowerPoint 插件 (Windows)
+# DakeSCI Clone — PowerPoint 插件 (Windows + Mac)
 
-一键安装的 DakeSCI 1.2 行为复刻版。打开 PowerPoint 后顶部会出现 "DakeSCI Clone" 选项卡，包含 7 个按钮，分别对应原版 DakeSCI 1.2 列出的 7 项功能。
+跨平台 DakeSCI 1.2 行为复刻版。Windows 装完直接出 ribbon，Mac 多一步手动启用。
 
 ## 版本
 - v1.2.0
 - Release: 2026-07-03（与原版 1.2 同日）
 
-## 功能对照（与原版 DakeSCI 1.2）
+## 平台支持矩阵
 
-| 按钮 | 功能 | 对应原版 |
-|------|------|---------|
-| Trim PNG | 自动裁除 PNG 空白边 | ✅ |
-| Generate Table | CSV / Markdown / 纯文本 → PPT 表格 | ✅ |
-| Layer Stack | 层状结构（带下箭头） | ✅ |
-| Matrix Offset | 矩阵逐行偏移（alternate / progressive / none） | ✅ |
-| Table Images | 多图按比例排入表格（letterbox，不拉伸） | ✅ |
-| Add Icon | 插入命名图标 | ✅ |
-| About | 显示版本 + 发布日期 | ✅ |
+| 功能 | Windows | Mac |
+|------|---------|-----|
+| Trim PNG | ✅ GDI+ 内置 | ⚠️ 需 Python3 + Pillow（installer 会检测） |
+| Generate Table | ✅ | ✅ |
+| Layer Stack | ✅ | ✅ |
+| Matrix Offset | ✅ | ✅ |
+| Table Images | ✅ | ✅ |
+| Add Icon | ✅ | ✅ |
+| About | ✅ | ✅ |
 
-## 安装步骤（一次性）
+## 安装 — Windows
 
-1. **解压** 本目录到任意位置（如桌面）
-2. **启用 VBA 信任访问**（关键，只需做一次）：
-   - PowerPoint → 文件 → 选项 → 信任中心 → 信任中心设置
-   - 宏设置 → ☑ 信任对 VBA 工程对象模型的访问
-3. **关闭 PowerPoint**（如果开着）
-4. **右键 `install.ps1` → 用 PowerShell 运行**
-   - 如果 PowerShell 执行策略阻止了脚本，先在管理员 PowerShell 跑一次：
+1. **解压** 本目录到任意位置
+2. **启用 VBA 信任访问**（一次性）：
+   PowerPoint → 文件 → 选项 → 信任中心 → 信任中心设置
+   → 宏设置 → ☑ 信任对 VBA 工程对象模型的访问
+3. 关闭所有 PowerPoint
+4. 右键 `install.ps1` → 用 PowerShell 运行
+   - 如果 PowerShell 执行策略阻止：
      ```powershell
      Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
      ```
-5. 看到绿色 `[OK]` 提示即安装成功
-6. **打开 PowerPoint** —— 顶部应该出现 "DakeSCI Clone" 选项卡
+5. 看到三次绿色 `[OK]` 即成功
+6. 打开 PowerPoint → 顶部出现 "DakeSCI Clone" 选项卡
+
+## 安装 — Mac
+
+### 第 0 步（可选）：装 Python3 让 PNG Trim 在 Mac 上能用
+
+```bash
+# 装 Homebrew（如果还没装）
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 装 Python + Pillow
+brew install python
+pip3 install Pillow
+```
+
+不装也能用，只是 PNG Trim 按钮会提示装一下。其他 6 个功能不受影响。
+
+### 第 1 步：跑 installer
+
+双击 `install-mac.command`（或在终端 `bash install-mac.command`）。
+
+它会：
+- 检测 Python3 + Pillow
+- 把 `DakeSCI.bas` 拷到 `~/Library/Group Containers/UBF8T346G9.Office/UserContent/Add-Ins/`
+- 在 Finder 打开这个文件夹方便后续操作
+
+### 第 2 步：在 PowerPoint 里启用（一次性手动）
+
+**情况 A — 你只有 Mac，没有 Windows**：
+1. 打开 PowerPoint → 新建空白文稿
+2. 文件 → 另存为 → PowerPoint Macro-Enabled 演示文稿（.pptm）
+3. 按 `Option+F11` 打开 VBA 编辑器
+4. 文件 → 导入文件... → 选刚才 installer 拷过去的 `DakeSCI.bas`
+5. 关闭 VBA 编辑器，保存 .pptm
+6. 以后要用 DakeSCI 功能就打开这个 .pptm
+   - 注意：.pptm 模式下 ribbon 只在文档开着时显示
+   - 想永久 ribbon：需要用 Windows 跑 install.ps1 生成 .ppam，把 .ppam 拷回 Mac，再跑一次 install-mac.command
+
+**情况 B — 你已经在 Windows 装过了，把 DakeSCI.ppam 拷到 Mac**：
+1. 在 Windows：%APPDATA%\Microsoft\AddIns\DakeSCI.ppam
+2. 把它拷到这个 dist 目录（与 install-mac.command 同级）
+3. 重新跑 install-mac.command → 它会自动把 .ppam 装到 Mac AddIns 目录
+4. 打开 PowerPoint → 工具 → PowerPoint 加载项 → 添加 → 选 DakeSCI.ppam
+5. 重启 PowerPoint，"DakeSCI Clone" 选项卡永久出现
 
 ## 卸载
 
-右键 `uninstall.ps1` → 用 PowerShell 运行。
+- Windows：右键 `uninstall.ps1` → 用 PowerShell 运行
+- Mac：删除 `~/Library/Group Containers/UBF8T346G9.Office/UserContent/Add-Ins/DakeSCI.*` 即可
 
 ## 系统要求
 
-- Windows 10 / 11
-- PowerPoint 2016 / 2019 / 2021 / 365（Office 2024 也可以）
-- .NET Framework 4.5+（PowerShell 自带）
+| 平台 | 要求 |
+|------|------|
+| Windows | Win 10/11 + PowerPoint 2016/2019/2021/365/2024 + .NET Framework 4.5+ |
+| Mac | macOS 12+ + PowerPoint 2019/2021/365 + （可选）Python 3.9+ 和 Pillow |
 
 ## 文件清单
 
 ```
 dist/
-├── DakeSCI.bas         # VBA 主模块（7 个功能）
-├── customUI14.xml      # ribbon 定义
-├── install.ps1         # Windows 安装器
-├── uninstall.ps1       # 卸载器
-└── README.md           # 本文件
+├── DakeSCI.bas            # VBA 主模块（跨平台，含 #If Mac Then 分支）
+├── customUI14.xml         # ribbon 定义
+├── install.ps1            # Windows 一键安装器
+├── install-mac.command    # Mac 一键安装器
+├── uninstall.ps1          # Windows 卸载器
+├── README.md              # 本文件
+└── QUICK-TEST.md          # 内部测试说明
 ```
 
 ## 常见问题
 
 **Q: 运行 install.ps1 提示 "PowerPoint blocks VBA project access"**
-A: 没启用第 2 步的 VBA 信任访问。回到 PowerPoint 启用后重新跑 `install.ps1`。
+A: 没启用 VBA 信任访问。见 Windows 安装第 2 步。
+
+**Q: Mac 上 PNG Trim 报 "Setup Required"**
+A: 装 Python3 + Pillow。一行命令：`pip3 install Pillow`（前提是已 `brew install python`）
 
 **Q: 安装成功但 ribbon 没出现**
-A: 完全关闭所有 PowerPoint 进程（任务管理器查 `POWERPNT.EXE`），然后重开。
-
-**Q: 杀软报毒**
-A: 误报。脚本是明文，可读可审计。VBA 注入 PowerPoint 是标准 COM 自动化操作。
+A: 完全关闭 PowerPoint（任务管理器查 POWERPNT.EXE / Mac 活动监视器查 Microsoft PowerPoint），重开。
 
 **Q: 与原版 DakeSCI 1.2 是否冲突**
-A: 不冲突。本插件名为 `DakeSCI Clone`，ribbon 标签、注册表项、AddIns 文件名（`DakeSCI.ppam` vs 原 `DakeSCI1.2.vsto`）都不同。
+A: 不冲突。ribbon 标签、注册表项、AddIns 文件名都不同。
+
+**Q: 杀软报毒 / Mac Gatekeeper 拦截**
+A: 误报。脚本明文可读可审计。Mac 首次运行 `.command` 文件可能要右键 → 打开，绕过 Gatekeeper。
 
 ## 与原版的差异
 
-- 本插件用纯 VBA 实现（原版是 VSTO/.NET）
+- 纯 VBA 实现（原版 VSTO/.NET）
 - AI 生图功能不在 1.2 release notes 里，未实现
 - 兑换码 / 机器码激活流程未实现（开源，无需激活）
 - 同一行为可能 UI 微调（input box 而非任务面板），但功能等价
 
 ## 反馈
 
-源码仓库：`/home/yangkai/00-make-money/dakesci-clone/`
-Python CLI 版本：`dake --help`（同目录的 .venv 已配置）
+源码：`/home/yangkai/00-make-money/dakesci-clone/`
+Python CLI 同源实现：`dake --help`（同目录 .venv 已配置）
