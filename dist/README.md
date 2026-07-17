@@ -17,6 +17,35 @@
 | Table Images | ✅ | ✅ |
 | Add Icon | ✅ | ✅ |
 | About | ✅ | ✅ |
+| Check Updates | ✅ MSXML2.XMLHTTP | ✅ curl via MacScript |
+
+## 预览
+
+> 📸 截图采集进行中。如果你也装好了，欢迎按 `screenshots/CAPTURE-GUIDE.md` 跑一遍贡献回来。
+
+### 1. Windows 一键安装
+
+![Windows install.ps1 三次绿色 OK](screenshots/win-01-install-ps1.png)
+
+### 2. PowerPoint 中的 Ribbon 标签
+
+![Uni-Scholar Figure ribbon with 9 buttons](screenshots/win-02-ribbon-tab.png)
+
+### 3. Generate Demo 一键演示
+
+![Generate Demo 生成的 3 张幻灯片](screenshots/win-04-generate-demo.png)
+
+### 4. Layer Stack 架构图
+
+![5 层堆叠 + 箭头](screenshots/win-06-layer-stack.png)
+
+### 5. Check for Updates
+
+![Check for Updates 对话框](screenshots/win-09-check-updates.png)
+
+---
+
+
 
 ## 安装 — Windows
 
