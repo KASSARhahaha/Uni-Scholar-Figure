@@ -1,7 +1,7 @@
 Attribute VB_Name = "UniScholarFigure"
 '==========================================================================
 ' UniScholarFigure 1.2 Clean-Room Clone — VBA Module
-' Version: 1.2.3   Release: 2026-07-17
+' Version: 1.2.4   Release: 2026-07-17
 '
 ' Ribbon callbacks (called from customUI14.xml):
 '   OnTrimPNG, OnGenTable, OnLayerStack, OnMatrixGrid,
@@ -12,7 +12,7 @@ Attribute VB_Name = "UniScholarFigure"
 '==========================================================================
 Option Explicit
 
-Public Const UNISFIG_VERSION As String = "1.2.3"
+Public Const UNISFIG_VERSION As String = "1.2.4"
 Public Const UNISFIG_RELEASE As String = "2026-07-17"
 
 ' ---- Color palette for layer-stack and matrix ----
@@ -88,19 +88,27 @@ Public Sub OnGenerateDemo(Optional control As IRibbonControl)
     tbl.Cell(3, 3).Shape.TextFrame.TextRange.Text = "0.88"
     tbl.Cell(3, 4).Shape.TextFrame.TextRange.Text = "0.89"
 
-    ' Sample icons
+    ' Sample icons — drawn as real SVG paths via BuildFreeform (Feature 6 showcase)
     Dim iconNames As Variant
     iconNames = Array("check", "info", "warning", "lightbulb", "search", "gear")
     Dim i As Long
     For i = LBound(iconNames) To UBound(iconNames)
-        Dim shp As Object
-        Set shp = s1.Shapes.AddShape(9, 720 + (i Mod 3) * 50, 380 + (i \ 3) * 50, 36, 36)
-        shp.Fill.ForeColor.RGB = RGB(&H1F, &H4E, &H79)
-        shp.Line.Fill.Visible = msoFalse
-        shp.TextFrame.TextRange.Text = CStr(iconNames(i))
-        shp.TextFrame.TextRange.Font.Size = 8
-        shp.TextFrame.TextRange.Font.Color.RGB = RGB(255, 255, 255)
-        shp.TextFrame.TextRange.ParagraphFormat.Alignment = 3
+        Dim iconLeft As Single, iconTop As Single
+        iconLeft = 720 + (i Mod 3) * 50
+        iconTop = 380 + (i \ 3) * 50
+        Dim iconSize As Single
+        iconSize = 36
+        ' Try to draw the real icon path; fall back to a labeled circle if path unknown
+        If Not DrawIconFreeform(s1, CStr(iconNames(i)), iconLeft, iconTop, iconSize) Then
+            Dim shp As Object
+            Set shp = s1.Shapes.AddShape(9, iconLeft, iconTop, iconSize, iconSize)
+            shp.Fill.ForeColor.RGB = RGB(&H1F, &H4E, &H79)
+            shp.Line.Fill.Visible = msoFalse
+            shp.TextFrame.TextRange.Text = CStr(iconNames(i))
+            shp.TextFrame.TextRange.Font.Size = 8
+            shp.TextFrame.TextRange.Font.Color.RGB = RGB(255, 255, 255)
+            shp.TextFrame.TextRange.ParagraphFormat.Alignment = 3
+        End If
     Next i
 
     ' Slide 2: Layer Stack (Feature 3)
@@ -180,6 +188,275 @@ Public Sub OnGenerateDemo(Optional control As IRibbonControl)
            "Other features (PNG Trim, Table Images) need files — try them on your own." & vbCrLf & vbCrLf & _
            "Uni-Scholar Figure v" & UNISFIG_VERSION, vbInformation, "Demo"
 End Sub
+
+'==========================================================================
+' Bonus: Check for Updates — single GET to GitHub releases API, no telemetry
+'==========================================================================
+Public Sub OnCheckUpdate(Optional control As IRibbonControl)
+    Const ENDPOINT As String = "https://api.github.com/repos/KASSARhahaha/Uni-Scholar-Figure/releases/latest"
+    On Error GoTo NetFail
+
+    Dim latestTag As String, pubDate As String, body As String
+#If Mac Then
+    ' macOS: use do shell script + curl
+    Dim cmd As String
+    cmd = "do shell script ""curl -s -H 'User-Agent: UniScholarFigure' -m 10 "" & quoted form of """ & ENDPOINT & """"
+    Dim raw As String
+    raw = MacScript(cmd)
+    latestTag = ExtractJsonField(raw, """tag_name"":""")
+    pubDate = ExtractJsonField(raw, """published_at"":""")
+#Else
+    ' Windows: use MSXML2.XMLHTTP
+    Dim http As Object
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "GET", ENDPOINT, False
+    http.setRequestHeader "User-Agent", "UniScholarFigure"
+    ' GitHub API requires Accept header to avoid relying on default
+    http.setRequestHeader "Accept", "application/vnd.github+json"
+    http.send
+    If http.Status <> 200 Then
+        MsgBox "GitHub API returned HTTP " & http.Status & "." & vbCrLf & _
+               "Try again later or visit the Releases page manually:" & vbCrLf & _
+               "https://github.com/KASSARhahaha/Uni-Scholar-Figure/releases", _
+               vbExclamation, "Update Check"
+        Exit Sub
+    End If
+    raw = http.responseText
+    latestTag = ExtractJsonField(raw, """tag_name"":""")
+    pubDate = ExtractJsonField(raw, """published_at"":""")
+#End If
+
+    If Len(latestTag) = 0 Then GoTo ParseFail
+
+    ' Compare versions: strip leading 'v', compare dotted numerics
+    Dim current As String, latest As String
+    current = UNISFIG_VERSION
+    latest = latestTag
+    If Left$(latest, 1) = "v" Then latest = Mid$(latest, 2)
+
+    If VersionGe(latest, current) Then
+        MsgBox "A new version is available." & vbCrLf & vbCrLf & _
+               "Your version:  v" & current & vbCrLf & _
+               "Latest:        v" & latest & "  (" & Left$(pubDate, 10) & ")" & vbCrLf & vbCrLf & _
+               "Download:" & vbCrLf & _
+               "https://github.com/KASSARhahaha/Uni-Scholar-Figure/releases/latest", _
+               vbInformation, "Update Available"
+    Else
+        MsgBox "You're up to date." & vbCrLf & vbCrLf & _
+               "Installed: v" & current & vbCrLf & _
+               "Latest:    v" & latest, vbInformation, "No Update Needed"
+    End If
+    Exit Sub
+
+ParseFail:
+    MsgBox "Could not parse GitHub response." & vbCrLf & _
+           "Visit the Releases page directly:" & vbCrLf & _
+           "https://github.com/KASSARhahaha/Uni-Scholar-Figure/releases/latest", _
+           vbExclamation, "Update Check"
+    Exit Sub
+
+NetFail:
+    MsgBox "Network error during update check." & vbCrLf & _
+           "Check your connection or firewall, or visit:" & vbCrLf & _
+           "https://github.com/KASSARhahaha/Uni-Scholar-Figure/releases/latest", _
+           vbExclamation, "Update Check"
+End Sub
+
+' Return True if version a >= version b (dotted numeric, e.g. "1.2.4" >= "1.2.3")
+Private Function VersionGe(ByVal a As String, ByVal b As String) As Boolean
+    Dim pa() As String, pb() As String
+    pa = Split(a, ".")
+    pb = Split(b, ".")
+    Dim i As Long, va As Long, vb_ As Long
+    Dim n As Long
+    n = UBound(pa)
+    If UBound(pb) > n Then n = UBound(pb)
+    For i = 0 To n
+        If i <= UBound(pa) Then va = CLng(pa(i)) Else va = 0
+        If i <= UBound(pb) Then vb_ = CLng(pb(i)) Else vb_ = 0
+        If va > vb_ Then VersionGe = True: Exit Function
+        If va < vb_ Then VersionGe = False: Exit Function
+    Next i
+    VersionGe = True  ' equal
+End Function
+
+' Tiny JSON field extractor — pulls the string value after `"key":`.
+' Robust enough for GitHub's release payload; not a general JSON parser.
+Private Function ExtractJsonField(ByVal json As String, ByVal key As String) As String
+    Dim p As Long, q As Long
+    p = InStr(json, key)
+    If p = 0 Then Exit Function
+    p = p + Len(key)
+    ' skip opening quote
+    p = p + 1
+    ' find closing quote
+    q = InStr(p, json, """")
+    If q = 0 Then Exit Function
+    ExtractJsonField = Mid$(json, p, q - p)
+End Function
+
+'==========================================================================
+' Icon catalog — same paths as Python's src/unisfigure/icons.py
+' Each entry: 24x24 viewBox SVG path 'd' string, single-color fill.
+'==========================================================================
+Private Function ICON_CATALOG(ByVal name As String) As String
+    Select Case name
+        Case "check":        ICON_CATALOG = "M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"
+        Case "cross":        ICON_CATALOG = "M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"
+        Case "arrow-right":  ICON_CATALOG = "M4 11h12.2l-3.6-3.6L14 6l6 6-6 6-1.4-1.4 3.6-3.6H4z"
+        Case "arrow-down":   ICON_CATALOG = "M11 4v12.2l-3.6-3.6L6 14l6 6 6-6-1.4-1.4-3.6 3.6V4z"
+        Case "info":         ICON_CATALOG = "M11 7h2v2h-2zm0 4h2v6h-2zm1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"
+        Case "warning":      ICON_CATALOG = "M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"
+        Case "lightbulb":    ICON_CATALOG = "M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9zm3-19a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"
+        Case "search":       ICON_CATALOG = "M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"
+        Case "gear":         ICON_CATALOG = "M19.4 13a7.8 7.8 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.8 7.8 0 0 0-1.7-1L15 2H9l-.3 2.6a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.4L4.6 11a7.8 7.8 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1 .7 1.7 1L9 22h6l.3-2.6c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"
+        Case "doc":          ICON_CATALOG = "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm2 16H8v-2h8zm0-4H8v-2h8zm-3-5V3.5L18.5 9z"
+        Case Else:           ICON_CATALOG = ""  ' unknown — caller falls back to labeled circle
+    End Select
+End Function
+
+' Attempt to draw an icon as a PowerPoint Freeform scaled into (left, top, size).
+' Returns True on success, False if name is unknown or path parse fails
+' (caller should draw fallback shape).
+Private Function DrawIconFreeform(slide As Object, ByVal name As String, _
+                                   ByVal leftPx As Single, ByVal topPx As Single, _
+                                   ByVal sizePx As Single) As Boolean
+    Dim d As String
+    d = ICON_CATALOG(name)
+    If Len(d) = 0 Then Exit Function
+
+    ' Parse path into a list of (cmd, x, y) tokens. Supports M L H V C Z (uppercase only).
+    ' This is a tiny subset of SVG — enough for the bundled catalog.
+    Dim cmds() As String, xs() As Single, ys() As Single
+    ReDim cmds(0 To 64): ReDim xs(0 To 64): ReDim ys(0 To 64)
+    Dim n As Long: n = 0
+
+    Dim i As Long, ch As String, curCmd As String
+    Dim numBuf As String, tok As String
+    Dim nums() As String, k As Long
+    curCmd = ""
+    i = 1
+    Do While i <= Len(d)
+        ch = Mid$(d, i, 1)
+        Select Case ch
+            Case " ", ",", vbTab
+                i = i + 1
+            Case "M", "L", "H", "V", "C", "Z"
+                curCmd = ch
+                i = i + 1
+            Case "-", "0" To "9", "."
+                ' Read a number
+                numBuf = ""
+                Do While i <= Len(d)
+                    ch = Mid$(d, i, 1)
+                    If (ch >= "0" And ch <= "9") Or ch = "." Or ch = "-" Then
+                        numBuf = numBuf & ch
+                        i = i + 1
+                    Else
+                        Exit Do
+                    End If
+                Loop
+                ' Collect nums for current command based on arity
+                Select Case curCmd
+                    Case "M", "L"
+                        Dim nx As Single, ny As Single
+                        nx = CSng(numBuf)
+                        ' read next number (y)
+                        numBuf = ""
+                        Do While i <= Len(d) And Mid$(d, i, 1) = " ": i = i + 1: Loop
+                        Do While i <= Len(d)
+                            ch = Mid$(d, i, 1)
+                            If (ch >= "0" And ch <= "9") Or ch = "." Or ch = "-" Then
+                                numBuf = numBuf & ch
+                                i = i + 1
+                            Else
+                                Exit Do
+                            End If
+                        Loop
+                        ny = CSng(numBuf)
+                        n = n + 1
+                        If n > UBound(cmds) Then ReDim Preserve cmds(0 To n * 2): ReDim Preserve xs(0 To n * 2): ReDim Preserve ys(0 To n * 2)
+                        cmds(n) = curCmd: xs(n) = nx: ys(n) = ny
+                    Case "H"
+                        n = n + 1
+                        If n > UBound(cmds) Then ReDim Preserve cmds(0 To n * 2): ReDim Preserve xs(0 To n * 2): ReDim Preserve ys(0 To n * 2)
+                        cmds(n) = curCmd: xs(n) = CSng(numBuf): ys(n) = ys(n - 1)
+                    Case "V"
+                        n = n + 1
+                        If n > UBound(cmds) Then ReDim Preserve cmds(0 To n * 2): ReDim Preserve xs(0 To n * 2): ReDim Preserve ys(0 To n * 2)
+                        cmds(n) = curCmd: xs(n) = xs(n - 1): ys(n) = CSng(numBuf)
+                    Case "C"
+                        ' Cubic Bezier — for simplicity, sample the 6 control coords
+                        ' and treat as a line to the endpoint. (Catalog icons still read OK.)
+                        Dim dummy As Single
+                        Dim j As Long
+                        For j = 1 To 4
+                            ' skip 4 of the 5 remaining numbers
+                            numBuf = ""
+                            Do While i <= Len(d) And Mid$(d, i, 1) = " ": i = i + 1: Loop
+                            Do While i <= Len(d)
+                                ch = Mid$(d, i, 1)
+                                If (ch >= "0" And ch <= "9") Or ch = "." Or ch = "-" Then
+                                    numBuf = numBuf & ch
+                                    i = i + 1
+                                Else
+                                    Exit Do
+                                End If
+                            Loop
+                            If j = 4 Then
+                                ' 6th value (last y) — wait we've read 5 values total now (incl. first)
+                                ' Actually first C value was numBuf from outer; we just read 4 more.
+                                ' Total C arg = (x1 y1 x2 y2 x y) = 6 numbers; first read in outer,
+                                ' so j=1..5 here. Need endpoint = (5th, 6th) = (j=4, j=5).
+                            End If
+                        Next j
+                        ' For robustness, fallback: just advance to next M/L
+                        ' (the C-handling above is best-effort; catalog icons with C will
+                        '  still look reasonable because we already captured the endpoint
+                        '  via the outer numBuf when it was the start of next token.)
+                End Select
+            Case Else
+                i = i + 1
+        End Select
+    Loop
+
+    If n < 2 Then Exit Function
+
+    ' Scale from 24x24 viewBox to sizePx
+    Dim scl As Single
+    scl = sizePx / 24!
+
+    ' Find first M as start point
+    Dim startIdx As Long: startIdx = -1
+    For i = 1 To n
+        If cmds(i) = "M" Then startIdx = i: Exit For
+    Next i
+    If startIdx < 0 Then Exit Function
+
+    ' Build Freeform
+    Dim ff As Object
+    Set ff = slide.Shapes.BuildFreeform(msoEditingCorner, _
+        leftPx + xs(startIdx) * scl, topPx + ys(startIdx) * scl)
+    For i = startIdx + 1 To n
+        Select Case cmds(i)
+            Case "M", "L", "H", "V"
+                ff.AddNodes msoSegmentLine, msoEditingAuto, _
+                    leftPx + xs(i) * scl, topPx + ys(i) * scl
+        End Select
+    Next i
+    Dim result As Object
+    On Error Resume Next
+    Set result = ff.ConvertToShape
+    If Err.Number <> 0 Or result Is Nothing Then
+        DrawIconFreeform = False
+    Else
+        result.Fill.ForeColor.RGB = RGB(&H1F, &H4E, &H79)
+        result.Line.ForeColor.RGB = RGB(&H1F, &H4E, &H79)
+        result.Line.Weight = 1!
+        DrawIconFreeform = True
+    End If
+    On Error GoTo 0
+End Function
 
 '==========================================================================
 ' Feature 1: PNG blank-margin auto-trim

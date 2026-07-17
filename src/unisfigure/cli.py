@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 import typer
@@ -13,7 +12,7 @@ from .icons import add_icon_to_slide, list_icons
 from .layer_stack import render_layer_stack
 from .matrix_grid import render_matrix
 from .table_images import fill_table_with_images
-from .trim_png import trim_many, trim_one
+from .trim_png import trim_many
 
 app = typer.Typer(
     name="unisfig",

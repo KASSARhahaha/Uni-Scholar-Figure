@@ -12,7 +12,6 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE, MSO_SHAPE_TYPE
-from pptx.util import Emu
 
 # 10in x 7.5in slide → 96 dpi
 DPI = 96

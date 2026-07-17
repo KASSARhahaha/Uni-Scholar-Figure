@@ -3,7 +3,7 @@
 A cross-platform toolkit for scientific figure creation in PowerPoint — available as both a Python CLI (Linux/Mac/Windows) and a VBA PowerPoint add-in (Windows + Mac).
 
 ## Version
-`1.2.3` — release `2026-07-17`
+`1.2.4` — release `2026-07-17`
 
 ## Install (Python CLI)
 
@@ -63,8 +63,26 @@ notes.md                # behavior notes
 ## Test
 
 ```bash
-pytest tests/ -v   # 8 passed
+pytest tests/ -v   # 20 passed
 ```
+
+## Privacy
+
+**Uni-Scholar Figure makes zero outbound network connections during normal use.**
+
+- No telemetry, no analytics, no crash reporter beacon.
+- No license-server or 兑换码 / 机器码 check — the add-in is fully offline.
+- No file is uploaded anywhere. Every transformation runs locally on the
+  user's machine (PowerPoint + VBA on Win/Mac, Python + Pillow on CLI).
+- The only feature that *can* touch the network is the optional
+  **Check for Updates** ribbon button (added in v1.2.4), which issues a
+  single GET to `api.github.com/repos/KASSARhahaha/Uni-Scholar-Figure/releases/latest`
+  when the user explicitly clicks it. No version, identifier, or usage
+  data is sent — the response is parsed locally and shown in a MsgBox.
+
+This is a deliberate design choice, and a feature: scientists and
+engineers in air-gapped or restricted-network environments can deploy
+Uni-Scholar Figure without firewall exceptions or DPA review.
 
 ## Out of scope (deliberate)
 - AI image generation (not part of v1.2 feature set)

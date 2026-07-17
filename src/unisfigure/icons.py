@@ -5,9 +5,7 @@ Adds named SVG/PNG icons to a slide. Icons ship from a tiny bundled set
 """
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Iterable
 
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE

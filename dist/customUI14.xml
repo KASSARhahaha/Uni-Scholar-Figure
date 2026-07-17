@@ -12,6 +12,7 @@
           <button id="btnAddIcon"    label="Add Icon"      size="large" imageMso="ShapesMoreShapes" onAction="OnAddIcon"      screentip="Add a named icon to the current slide" />
           <button id="btnVersion"    label="About"         size="large" imageMso="Info"             onAction="OnShowVersion"  screentip="Show version + release date" />
           <button id="btnDemo"       label="Generate Demo" size="large" imageMso="BlogHomePage"     onAction="OnGenerateDemo" screentip="Build a 3-slide showcase exercising all features" />
+          <button id="btnUpdate"     label="Check Updates"  size="large" imageMso="DownloadAll"     onAction="OnCheckUpdate"  screentip="Check GitHub for a newer release (no telemetry)" />
         </group>
       </tab>
     </tabs>

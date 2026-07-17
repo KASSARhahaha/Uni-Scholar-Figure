@@ -41,10 +41,8 @@ def render_layer_stack(
 
     palette = palette or DEFAULT_PALETTE
     left = Inches((10 - box_width_in) / 2)  # centered on 10in wide
-    top0 = Inches(1.5)
     bh = Inches(box_height_in)
     bw = Inches(box_width_in)
-    gap = Inches(gap_in)
 
     for i, label in enumerate(layers):
         top = Inches(1.5 + i * (box_height_in + gap_in))

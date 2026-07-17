@@ -34,7 +34,6 @@ def render_matrix(
 
     cw = Inches(cell_in)
     ch = Inches(cell_in)
-    gap = Inches(gap_in)
     stride_x = cell_in + gap_in
     stride_y = cell_in + gap_in
 

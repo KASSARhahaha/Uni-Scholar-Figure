@@ -1,13 +1,11 @@
 """Smoke + edge-case tests covering all 7 features end-to-end on a real .pptx."""
 from __future__ import annotations
 
-import csv
-import io
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw
 import pytest
+from PIL import Image, ImageDraw
 from typer.testing import CliRunner
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -36,7 +34,7 @@ def _make_padded_png(path: Path, content_size: int = 80, canvas: int = 200) -> P
 
 
 def test_release_info():
-    assert __version__ == "1.2.3"
+    assert __version__ == "1.2.4"
     assert RELEASE_DATE == "2026-07-17"
 
 
@@ -113,7 +111,7 @@ def test_trim_png_colored_content(tmp_path):
     img = Image.new("RGB", (200, 200), "white")
     ImageDraw.Draw(img).rectangle([60, 60, 140, 140], fill="red")
     img.save(src, "PNG")
-    bbox = trim_one(src)
+    trim_one(src)
     cropped = Image.open(src)
     # Cropped tightly around the red square (within a couple px padding tolerance)
     assert 70 <= cropped.width <= 90

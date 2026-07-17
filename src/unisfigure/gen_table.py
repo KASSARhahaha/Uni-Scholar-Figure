@@ -9,7 +9,6 @@ import csv
 import logging
 from io import StringIO
 from pathlib import Path
-from typing import Iterable
 
 from pptx import Presentation
 from pptx.util import Inches, Pt
@@ -96,10 +95,6 @@ def add_table(
 
     tbl_shape = slide.shapes.add_table(n_rows, n_cols, left, top, width, height)
     tbl = tbl_shape.table
-    try:
-        tbl_style = tbl._tbl.find
-    except Exception:
-        pass
     # Apply style name
     from pptx.oxml.ns import qn
 

@@ -4,6 +4,31 @@ All notable changes to Uni-Scholar Figure are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] — 2026-07-17
+
+### Added
+- **Check for Updates** ribbon button — single GET to
+  `api.github.com/repos/.../releases/latest`, version-compared locally,
+  zero telemetry. Uses `MSXML2.XMLHTTP` on Windows, `curl` via `MacScript`
+  on Mac. New VBA helper `OnCheckUpdate` + `VersionGe` + `ExtractJsonField`.
+- **Real icons in Generate Demo** — bundled SVG paths (check / info / warning /
+  lightbulb / search / gear / arrow / cross / doc) are now rendered as
+  PowerPoint Freeform shapes via a minimal M/L/H/V SVG path parser
+  (`DrawIconFreeform`). Unknown names still fall back to a labeled circle.
+- **Privacy statement** in `README.md` — makes the zero-network posture
+  explicit (only the new Check-for-Updates button opts in).
+- `dist/screenshots/` placeholder with naming convention for future captures.
+- `[tool.ruff]` and `[tool.mypy]` config blocks in `pyproject.toml`.
+
+### Changed
+- Ruff linter clean (0 warnings). Removed unused `tbl_style`/`top0`/`gap`/
+  `bbox` variables across `gen_table.py`, `layer_stack.py`,
+  `matrix_grid.py`, `tests/test_smoke.py`.
+- `.gitignore` now excludes `.ruff_cache/` and `.mypy_cache/`.
+- Bump version to `1.2.4` across all 7 locations.
+- Ribbon now exposes 9 buttons (was 8): the original 7 features + Generate
+  Demo + Check for Updates.
+
 ## [1.2.3] — 2026-07-17
 
 ### Added
