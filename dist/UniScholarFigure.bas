@@ -1,7 +1,7 @@
 Attribute VB_Name = "UniScholarFigure"
 '==========================================================================
 ' UniScholarFigure 1.2 Clean-Room Clone — VBA Module
-' Version: 1.2.0   Release: 2026-07-03
+' Version: 1.2.2   Release: 2026-07-17
 '
 ' Ribbon callbacks (called from customUI14.xml):
 '   OnTrimPNG, OnGenTable, OnLayerStack, OnMatrixGrid,
@@ -12,8 +12,8 @@ Attribute VB_Name = "UniScholarFigure"
 '==========================================================================
 Option Explicit
 
-Public Const UNISFIG_VERSION As String = "1.2.0"
-Public Const UNISFIG_RELEASE As String = "2026-07-03"
+Public Const UNISFIG_VERSION As String = "1.2.2"
+Public Const UNISFIG_RELEASE As String = "2026-07-17"
 
 ' ---- Color palette for layer-stack and matrix ----
 Private Const PAL1 As Long = &HC6864F   ' blue (BGR)
@@ -245,7 +245,7 @@ Private Function TrimOnePNGMac(ByVal filePath As String) As Boolean
                "im.crop(b).save(p,'PNG',optimize=True)"
 
     Dim tmpPath As String
-    tmpPath = "/tmp/dake_trim_" & Format(Now, "yyyymmddhhnnss") & ".py"
+    tmpPath = "/tmp/unisfig_trim_" & Format(Now, "yyyymmddhhnnss") & ".py"
     Dim f As Integer
     f = FreeFile
     Open tmpPath For Output As #f

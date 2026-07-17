@@ -5,13 +5,13 @@ Reproduce the 7 listed UniScholarFigure 1.2 behaviors as a Linux-runnable Python
 NOT a binary crack, NOT a UI clone. Behavior-only clean-room reimplementation.
 
 ## Source of truth (release notes from user)
-1. PNG 空白边自动裁除 — ✅ `dake trim-png`
-2. 生成表格 — ✅ `dake gen-table`
-3. 层状结构 — ✅ `dake layer-stack`
-4. 矩阵逐行偏移 — ✅ `dake matrix`
-5. 表格排版保持图片比例 — ✅ `dake table-images`
-6. 图标补充 — ✅ `dake add-icon` (10 bundled icons)
-7. 统一安装日期显示 — ✅ `dake version` + `RELEASE_DATE`
+1. PNG 空白边自动裁除 — ✅ `unisfig trim-png`
+2. 生成表格 — ✅ `unisfig gen-table`
+3. 层状结构 — ✅ `unisfig layer-stack`
+4. 矩阵逐行偏移 — ✅ `unisfig matrix`
+5. 表格排版保持图片比例 — ✅ `unisfig table-images`
+6. 图标补充 — ✅ `unisfig add-icon` (55 bundled icons)
+7. 统一安装日期显示 — ✅ `unisfig version` + `RELEASE_DATE`
 
 ## Platform: Option B
 - Python 3.11 + python-pptx 1.0.2 + Pillow + typer 0.26

@@ -34,8 +34,8 @@ def _make_padded_png(path: Path, content_size: int = 80, canvas: int = 200) -> P
 
 
 def test_release_info():
-    assert __version__ == "1.2.0"
-    assert RELEASE_DATE == "2026-07-03"
+    assert __version__ == "1.2.2"
+    assert RELEASE_DATE == "2026-07-17"
 
 
 def test_trim_png(tmp_path):

@@ -3,8 +3,8 @@
 跨平台 UniScholarFigure 1.2 行为复刻版。Windows 装完直接出 ribbon，Mac 多一步手动启用。
 
 ## 版本
-- v1.2.0
-- Release: 2026-07-03（与原版 1.2 同日）
+- v1.2.2
+- Release: 2026-07-17
 
 ## 平台支持矩阵
 
@@ -128,4 +128,4 @@ A: 误报。脚本明文可读可审计。Mac 首次运行 `.command` 文件可�
 ## 反馈
 
 源码：`/home/yangkai/00-make-money/Uni-Scholar-Figure/`
-Python CLI 同源实现：`dake --help`（同目录 .venv 已配置）
+Python CLI 同源实现：`unisfig --help`（同目录 .venv 已配置）
