@@ -1,7 +1,7 @@
 Attribute VB_Name = "UniScholarFigure"
 '==========================================================================
 ' UniScholarFigure 1.2 Clean-Room Clone — VBA Module
-' Version: 1.2.2   Release: 2026-07-17
+' Version: 1.2.3   Release: 2026-07-17
 '
 ' Ribbon callbacks (called from customUI14.xml):
 '   OnTrimPNG, OnGenTable, OnLayerStack, OnMatrixGrid,
@@ -12,7 +12,7 @@ Attribute VB_Name = "UniScholarFigure"
 '==========================================================================
 Option Explicit
 
-Public Const UNISFIG_VERSION As String = "1.2.2"
+Public Const UNISFIG_VERSION As String = "1.2.3"
 Public Const UNISFIG_RELEASE As String = "2026-07-17"
 
 ' ---- Color palette for layer-stack and matrix ----

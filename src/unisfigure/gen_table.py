@@ -6,12 +6,15 @@ PowerPoint table on a new slide (or appends to an existing deck).
 from __future__ import annotations
 
 import csv
+import logging
 from io import StringIO
 from pathlib import Path
 from typing import Iterable
 
 from pptx import Presentation
 from pptx.util import Inches, Pt
+
+logger = logging.getLogger(__name__)
 
 ALIGN_LOOKUP = {"left": None, "center": None, "right": None}  # set below
 
@@ -75,6 +78,14 @@ def add_table(
 
     n_rows = max(len(rows), 1)
     n_cols = max(len(rows[0]) if rows else 1, 1)
+    # Detect ragged rows and warn (still normalize — don't fail the build)
+    ragged = [(i, len(r)) for i, r in enumerate(rows) if len(r) != n_cols]
+    if ragged:
+        logger.warning(
+            "ragged CSV: %d row(s) have column count != %d (first 3: %s). "
+            "Short rows padded with empty cells, long rows truncated.",
+            len(ragged), n_cols, ragged[:3],
+        )
     # Normalize ragged rows
     norm = [(r + [""] * n_cols)[:n_cols] for r in rows]
 

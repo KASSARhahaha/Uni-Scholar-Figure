@@ -4,6 +4,26 @@ All notable changes to Uni-Scholar Figure are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] — 2026-07-17
+
+### Added
+- 12 edge-case tests covering empty / malformed inputs, ragged CSV (with
+  warning), unicode layer names, all-white PNGs, colored content detection,
+  and unknown icon names (`tests/test_smoke.py` 8 → 20 tests).
+- CLI input validation: `matrix --rows`/`--cols` must be positive int,
+  `--offset` must be ≥ 0, `--mode` must be `alternate|progressive|none`,
+  `add-icon --color` must match `^[0-9A-Fa-f]{6}$`. All violations exit 2
+  with a clear `typer.BadParameter` message.
+- `gen_table` now logs a WARNING when rows have inconsistent column counts
+  (still normalizes — never fails the build).
+- `add_icon_to_slide` now raises `KeyError` upfront on unknown icon names
+  instead of silently drawing a fallback shape.
+- Expanded `dist/QUICK-TEST.md` into a full Windows + Mac manual smoke
+  checklist (W1-W9, M1-M6, MP1-MP4) plus pre-tag versioning checklist.
+
+### Changed
+- Bump version to `1.2.3` across all 7 locations.
+
 ## [1.2.2] — 2026-07-17
 
 ### Fixed

@@ -1,6 +1,7 @@
 """Top-level CLI: unisfig <command> [opts]."""
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -20,6 +21,34 @@ app = typer.Typer(
     no_args_is_help=True,
     rich_markup_mode="rich",
 )
+
+_HEX_COLOR_RE = re.compile(r"^[0-9A-Fa-f]{6}$")
+
+
+def _positive_int(v: int, field: str) -> int:
+    if v <= 0:
+        raise typer.BadParameter(f"{field} must be a positive integer, got {v}")
+    return v
+
+
+def _nonneg_float(v: float, field: str) -> float:
+    if v < 0:
+        raise typer.BadParameter(f"{field} must be >= 0, got {v}")
+    return v
+
+
+def _positive_float(v: float, field: str) -> float:
+    if v <= 0:
+        raise typer.BadParameter(f"{field} must be > 0, got {v}")
+    return v
+
+
+def _validate_color(v: str) -> str:
+    if not _HEX_COLOR_RE.match(v):
+        raise typer.BadParameter(
+            f"color must be 6 hex digits (e.g. 1F4E79), got {v!r}"
+        )
+    return v
 
 
 @app.command()
@@ -89,6 +118,11 @@ def matrix_cmd(
     label: bool = typer.Option(False, "--label", help="Number cells R,C"),
 ) -> None:
     """Feature 4: render a matrix with per-row offset."""
+    _positive_int(rows, "rows")
+    _positive_int(cols, "cols")
+    _nonneg_float(offset, "offset")
+    if mode not in ("alternate", "progressive", "none"):
+        raise typer.BadParameter(f"mode must be alternate|progressive|none, got {mode!r}")
     label_fn = (lambda r, c: f"{r},{c}") if label else None
     render_matrix(
         deck, rows=rows, cols=cols, row_offset_in=offset, offset_mode=mode,
@@ -106,6 +140,10 @@ def table_images_cmd(
     title: str | None = typer.Option(None, "--title"),
     cell_size: float = typer.Option(2.0, "--cell-in"),
 ) -> None:
+    """Feature 5: insert images into a table preserving aspect ratio."""
+    _positive_int(rows, "rows")
+    _positive_int(cols, "cols")
+    _positive_float(cell_size, "cell-in")
     """Feature 5: insert images into a table preserving aspect ratio."""
     exts = {".png", ".jpg", ".jpeg", ".gif", ".bmp"}
     files = sorted(p for p in images_dir.iterdir() if p.suffix.lower() in exts)
@@ -136,6 +174,7 @@ def add_icon_cmd(
     color: str = typer.Option("1F4E79", "--color"),
 ) -> None:
     """Feature 6: add a named icon to a slide."""
+    _validate_color(color)
     if name == "list":
         for n in list_icons():
             typer.echo(n)

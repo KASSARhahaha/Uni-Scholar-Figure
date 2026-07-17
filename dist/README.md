@@ -3,7 +3,7 @@
 跨平台 UniScholarFigure 1.2 行为复刻版。Windows 装完直接出 ribbon，Mac 多一步手动启用。
 
 ## 版本
-- v1.2.2
+- v1.2.3
 - Release: 2026-07-17
 
 ## 平台支持矩阵

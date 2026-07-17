@@ -9,7 +9,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
 
 Write-Host ""
-Write-Host "Uni-Scholar Figure v1.2.2 installer" -ForegroundColor Cyan
+Write-Host "Uni-Scholar Figure v1.2.3 installer" -ForegroundColor Cyan
 Write-Host "================================"
 Write-Host ""
 

@@ -63,7 +63,14 @@ def add_icon_to_slide(
     freeform by writing the SVG to disk and embedding it as a picture
     when the host supports SVG (PowerPoint 2016+). For older hosts the
     caller should pre-convert to PNG via cairosvg / rsvg-convert.
+
+    Raises:
+        KeyError: if `name` is not in the bundled catalog.
     """
+    if name not in CATALOG:
+        raise KeyError(
+            f"unknown icon: {name!r}. Available: {', '.join(list_icons())}"
+        )
     prs = Presentation(str(deck_path)) if deck_path.exists() else Presentation()
     while len(prs.slides) <= slide_index:
         prs.slides.add_slide(prs.slide_layouts[5])
