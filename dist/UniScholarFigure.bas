@@ -1,7 +1,7 @@
 Attribute VB_Name = "UniScholarFigure"
 '==========================================================================
 ' UniScholarFigure 1.2 Clean-Room Clone — VBA Module
-' Version: 1.2.4   Release: 2026-07-17
+' Version: 1.3.0   Release: 2026-07-18
 '
 ' Ribbon callbacks (called from customUI14.xml):
 '   OnTrimPNG, OnGenTable, OnLayerStack, OnMatrixGrid,
@@ -12,8 +12,8 @@ Attribute VB_Name = "UniScholarFigure"
 '==========================================================================
 Option Explicit
 
-Public Const UNISFIG_VERSION As String = "1.2.4"
-Public Const UNISFIG_RELEASE As String = "2026-07-17"
+Public Const UNISFIG_VERSION As String = "1.3.0"
+Public Const UNISFIG_RELEASE As String = "2026-07-18"
 
 ' ---- Color palette for layer-stack and matrix ----
 Private Const PAL1 As Long = &HC6864F   ' blue (BGR)
@@ -261,6 +261,288 @@ NetFail:
            "https://github.com/KASSARhahaha/Uni-Scholar-Figure/releases/latest", _
            vbExclamation, "Update Check"
 End Sub
+
+'==========================================================================
+' Feature 8: Research Records — pull Uni-Scholar literature into a PPT table
+'==========================================================================
+Public Sub OnResearchRecords(Optional control As IRibbonControl)
+    Const ENDPOINT As String = "https://uni-scholar.asia/api/literature/papers?limit=20&sortBy=createdAt&sortOrder=desc"
+
+    ' --- 1. Get token (from cache or InputBox) ---
+    Dim token As String
+    token = ReadCachedToken()
+    If Len(token) = 0 Then
+        token = InputBox( _
+            "Paste your Uni-Scholar Figure token." & vbCrLf & vbCrLf & _
+            "Get it from: https://uni-scholar.asia/app/settings" & vbCrLf & _
+            "(scroll to the \"Uni-Scholar Figure PPT plugin\" section, click Copy)." & vbCrLf & vbCrLf & _
+            "Token is cached locally after first use. To reset it, hold Shift while clicking this button.", _
+            "Uni-Scholar Figure — Token Required")
+        If Len(token) = 0 Then Exit Sub
+        token = Trim(token)
+    End If
+
+    ' --- 2. Fetch papers ---
+    Dim raw As String
+    On Error GoTo NetFail
+#If Mac Then
+    Dim cmd As String
+    cmd = "do shell script ""curl -s -m 15 -H 'Authorization: Bearer "" & quoted form of """ & token & """ & ""' "" & quoted form of """ & ENDPOINT & """"
+    raw = MacScript(cmd)
+#Else
+    Dim http As Object
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "GET", ENDPOINT, False
+    http.setRequestHeader "Authorization", "Bearer " & token
+    http.setRequestHeader "Accept", "application/json"
+    http.send
+    If http.Status = 401 Then
+        WriteCachedToken ""  ' clear bad token
+        MsgBox "Token rejected (HTTP 401). Re-copy from:" & vbCrLf & _
+               "https://uni-scholar.asia/app/settings", vbExclamation, "Auth Failed"
+        Exit Sub
+    End If
+    If http.Status <> 200 Then
+        MsgBox "Server returned HTTP " & http.Status & "." & vbCrLf & _
+               "Try again later.", vbExclamation, "Research Records"
+        Exit Sub
+    End If
+    raw = http.responseText
+#End If
+
+    ' --- 3. Parse JSON (tiny subset parser) ---
+    Dim items As String
+    items = ExtractJsonArray(raw, """items""")
+    If Len(items) = 0 Then
+        MsgBox "No records returned." & vbCrLf & _
+               "Either your library is empty, or the response format changed." & vbCrLf & vbCrLf & _
+               "Visit https://uni-scholar.asia/app/literature to verify.", _
+               vbInformation, "Research Records"
+        Exit Sub
+    End If
+
+    ' --- 4. Count items + build table ---
+    Dim n As Long
+    n = CountJsonObjects(items)
+    If n = 0 Then
+        MsgBox "Your library is empty." & vbCrLf & _
+               "Add papers at https://uni-scholar.asia/app/literature first.", _
+               vbInformation, "Research Records"
+        Exit Sub
+    End If
+
+    ' Cache the token only after a successful auth
+    WriteCachedToken token
+
+    ' --- 5. Render table on current slide (or new slide) ---
+    Dim pres As Object: Set pres = ActivePresentation
+    If pres Is Nothing Then Set pres = Application.Presentations.Add(msoTrue)
+    Dim slide As Object
+    On Error Resume Next
+    Set slide = Application.ActiveWindow.View.Slide
+    On Error GoTo 0
+    If slide Is Nothing Then
+        Set slide = pres.Slides.Add(pres.Slides.Count + 1, 5)  ' Title Only
+    End If
+
+    Dim tbl As Object
+    Dim nCols As Long: nCols = 6
+    Set tbl = slide.Shapes.AddTable(n + 1, nCols, 30, 100, 860, 30 * (n + 1)).Table
+
+    ' Header row
+    tbl.Cell(1, 1).Shape.TextFrame.TextRange.Text = "Title"
+    tbl.Cell(1, 2).Shape.TextFrame.TextRange.Text = "Authors"
+    tbl.Cell(1, 3).Shape.TextFrame.TextRange.Text = "Journal"
+    tbl.Cell(1, 4).Shape.TextFrame.TextRange.Text = "Year"
+    tbl.Cell(1, 5).Shape.TextFrame.TextRange.Text = "DOI"
+    tbl.Cell(1, 6).Shape.TextFrame.TextRange.Text = "Catalyst"
+    Dim c As Long
+    For c = 1 To nCols
+        Dim hdr As Object
+        Set hdr = tbl.Cell(1, c).Shape
+        hdr.TextFrame.TextRange.Font.Bold = msoTrue
+        hdr.Fill.ForeColor.RGB = RGB(&H1F, &H4E, &H79)
+        hdr.TextFrame.TextRange.Font.Color.RGB = RGB(255, 255, 255)
+    Next c
+
+    ' Data rows — split items by top-level object boundaries
+    Dim objs() As String, i As Long
+    objs = SplitJsonObjects(items)
+    For i = 0 To UBound(objs)
+        If i >= n Then Exit For
+        Dim objJson As String: objJson = objs(i)
+        Dim title As String: title = ExtractJsonField(objJson, """title"":""")
+        Dim authors As String: authors = ExtractJsonField(objJson, """authors"":""")
+        Dim journal As String: journal = ExtractJsonField(objJson, """journal"":""")
+        Dim year As String: year = ExtractJsonField(objJson, """year"":""")
+        Dim doi As String: doi = ExtractJsonField(objJson, """doi"":""")
+        Dim catalyst As String: catalyst = ExtractJsonField(objJson, """catalystName"":""")
+        ' Authors is a JSON array string like ["A","B"] — strip brackets/quotes
+        authors = CleanJsonArray(authors)
+        ' Truncate long fields for readability
+        If Len(title) > 60 Then title = Left$(title, 57) & "..."
+        If Len(authors) > 30 Then authors = Left$(authors, 27) & "..."
+        If Len(journal) > 25 Then journal = Left$(journal, 22) & "..."
+
+        tbl.Cell(i + 2, 1).Shape.TextFrame.TextRange.Text = title
+        tbl.Cell(i + 2, 2).Shape.TextFrame.TextRange.Text = authors
+        tbl.Cell(i + 2, 3).Shape.TextFrame.TextRange.Text = journal
+        tbl.Cell(i + 2, 4).Shape.TextFrame.TextRange.Text = year
+        tbl.Cell(i + 2, 5).Shape.TextFrame.TextRange.Text = doi
+        tbl.Cell(i + 2, 6).Shape.TextFrame.TextRange.Text = catalyst
+        ' Tighten font
+        Dim r As Long
+        For r = 1 To nCols
+            tbl.Cell(i + 2, r).Shape.TextFrame.TextRange.Font.Size = 10
+        Next r
+    Next i
+
+    MsgBox "Pulled " & n & " record(s) from your Uni-Scholar library." & vbCrLf & _
+           "Token cached for next time (hold Shift + click to reset).", _
+           vbInformation, "Research Records"
+    Exit Sub
+
+NetFail:
+    MsgBox "Network error." & vbCrLf & _
+           "Check your connection or firewall." & vbCrLf & vbCrLf & _
+           "Endpoint: " & ENDPOINT, _
+           vbExclamation, "Research Records"
+End Sub
+
+' --- Token cache: %APPDATA%\UniScholarFigure\token.txt on Win,
+'     ~/Library/Application Support/UniScholarFigure/token.txt on Mac ---
+Private Function TokenCachePath() As String
+#If Mac Then
+    TokenCachePath = MacScript("do shell script ""echo $HOME/Library/Application Support/UniScholarFigure/token.txt""")
+#Else
+    Dim p As String
+    p = Environ$("APPDATA")
+    If Len(p) = 0 Then p = Environ$("USERPROFILE")
+    TokenCachePath = p & "\UniScholarFigure\token.txt"
+#End If
+End Function
+
+Private Function ReadCachedToken() As String
+    On Error Resume Next
+    ' Shift-click resets the token
+    If GetAsyncKeyState_Bytes(&H10) < 0 Then Exit Function  ' VK_SHIFT = 0x10
+    Dim path As String: path = TokenCachePath
+#If Mac Then
+    ReadCachedToken = Trim(MacScript("do shell script ""cat "" & quoted form of """ & path & """ 2>/dev/null || true"))
+#Else
+    Dim f As Integer: f = FreeFile
+    Open path For Input As #f
+    If LOF(f) > 0 Then
+        Dim s As String: s = Input$(LOF(f), #f)
+        ReadCachedToken = Trim(s)
+    End If
+    Close #f
+#End If
+    On Error GoTo 0
+End Function
+
+Private Sub WriteCachedToken(ByVal token As String)
+    On Error Resume Next
+    Dim path As String: path = TokenCachePath()
+#If Mac Then
+    MacScript "do shell script ""mkdir -p $(dirname "" & quoted form of """ & path & """ & "") && printf '%s' "" & quoted form of """ & token & """ & "" > "" & quoted form of """ & path & """"
+#Else
+    Dim parent As String
+    parent = Left$(path, InStrRev(path, "\") - 1)
+    If Len(Dir(parent, vbDirectory)) = 0 Then MkDir parent
+    Dim f As Integer: f = FreeFile
+    Open path For Output As #f
+    Print #f, token;
+    Close #f
+#End If
+    On Error GoTo 0
+End Sub
+
+#If Not Mac Then
+Private Declare PtrSafe Function GetAsyncKeyState_Bytes Lib "user32" Alias "GetAsyncKeyState" (ByVal vKey As Long) As Integer
+#End If
+
+' --- Tiny JSON helpers (not a general parser) ---
+Private Function ExtractJsonArray(ByVal json As String, ByVal key As String) As String
+    Dim p As Long, depth As Long, i As Long, ch As String
+    p = InStr(json, key)
+    If p = 0 Then Exit Function
+    ' Skip to '[' after key + ":"
+    p = InStr(p + Len(key), json, "[")
+    If p = 0 Then Exit Function
+    ' Walk until matching ']'
+    depth = 1
+    i = p + 1
+    Do While i <= Len(json) And depth > 0
+        ch = Mid$(json, i, 1)
+        If ch = "[" Then depth = depth + 1
+        If ch = "]" Then depth = depth - 1
+        i = i + 1
+    Loop
+    ExtractJsonArray = Mid$(json, p, i - p)
+End Function
+
+Private Function CountJsonObjects(ByVal arrJson As String) As Long
+    Dim depth As Long, i As Long, ch As String, inStr_ As Boolean
+    depth = 0
+    For i = 1 To Len(arrJson)
+        ch = Mid$(arrJson, i, 1)
+        If inStr_ Then
+            If ch = """" Then inStr_ = False
+        Else
+            Select Case ch
+                Case """": inStr_ = True
+                Case "{": depth = depth + 1
+                Case "}": If depth = 1 Then CountJsonObjects = CountJsonObjects + 1
+                          depth = depth - 1
+            End Select
+        End If
+    Next i
+End Function
+
+Private Function SplitJsonObjects(ByVal arrJson As String) As String()
+    Dim result() As String
+    ReDim result(0 To 31)
+    Dim n As Long: n = 0
+    Dim depth As Long, i As Long, ch As String, inStr_ As Boolean
+    Dim startIdx As Long: startIdx = 0
+    depth = 0
+    For i = 1 To Len(arrJson)
+        ch = Mid$(arrJson, i, 1)
+        If inStr_ Then
+            If ch = """" Then inStr_ = False
+        Else
+            Select Case ch
+                Case """": inStr_ = True
+                Case "{":
+                    If depth = 0 Then startIdx = i
+                    depth = depth + 1
+                Case "}":
+                    depth = depth - 1
+                    If depth = 0 And startIdx > 0 Then
+                        If n > UBound(result) Then ReDim Preserve result(0 To n * 2)
+                        result(n) = Mid$(arrJson, startIdx, i - startIdx + 1)
+                        n = n + 1
+                        startIdx = 0
+                    End If
+            End Select
+        End If
+    Next i
+    If n = 0 Then
+        ReDim result(0 To 0)
+        result(0) = ""
+    End If
+    SplitJsonObjects = result
+End Function
+
+Private Function CleanJsonArray(ByVal s As String) As String
+    ' Turn ["A","B","C"] into "A, B, C"
+    s = Replace(s, "[", "")
+    s = Replace(s, "]", "")
+    s = Replace(s, """", "")
+    s = Replace(s, ",", ", ")
+    CleanJsonArray = Trim(s)
+End Function
 
 ' Return True if version a >= version b (dotted numeric, e.g. "1.2.4" >= "1.2.3")
 Private Function VersionGe(ByVal a As String, ByVal b As String) As Boolean

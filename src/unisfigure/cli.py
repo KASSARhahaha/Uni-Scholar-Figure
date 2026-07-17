@@ -11,6 +11,13 @@ from .gen_table import gen_table_from_text
 from .icons import add_icon_to_slide, list_icons
 from .layer_stack import render_layer_stack
 from .matrix_grid import render_matrix
+from .research_records import (
+    clear_cached_token,
+    fetch_papers,
+    read_cached_token,
+    render_records_table,
+    write_cached_token,
+)
 from .table_images import fill_table_with_images
 from .trim_png import trim_many
 
@@ -180,6 +187,66 @@ def add_icon_cmd(
         return
     add_icon_to_slide(deck, name, slide_index=slide, left_in=left, top_in=top, size_in=size, color_hex=color)
     typer.echo(f"added icon '{name}' -> {deck}")
+
+
+@app.command("research-records")
+def research_records_cmd(
+    deck: Path = typer.Option(Path("research_records.pptx"), "--deck", "-d"),
+    token: str | None = typer.Option(None, "--token", help="Uni-Scholar JWT (omit to read cache)"),
+    reset_token: bool = typer.Option(False, "--reset-token", help="Forget cached token"),
+    limit: int = typer.Option(20, "--limit", help="Max papers to fetch (1-100)"),
+    year_from: int | None = typer.Option(None, "--year-from"),
+    year_to: int | None = typer.Option(None, "--year-to"),
+    search: str | None = typer.Option(None, "--search", help="Optional substring filter"),
+    title: str | None = typer.Option(None, "--title"),
+) -> None:
+    """Feature 8: pull your Uni-Scholar literature records into a PPT table."""
+    _positive_int(limit, "limit")
+    if limit > 100:
+        raise typer.BadParameter("limit must be <= 100 (API cap)")
+
+    if reset_token:
+        clear_cached_token()
+        typer.echo("cached token cleared.")
+        return
+
+    effective_token = token or read_cached_token()
+    if not effective_token:
+        effective_token = typer.prompt(
+            "Paste your Uni-Scholar token (from "
+            "https://uni-scholar.asia/app/settings → PPT plugin section)",
+            hide_input=True,
+        )
+        if not effective_token.strip():
+            typer.echo("no token provided, aborting.", err=True)
+            raise typer.Exit(1)
+
+    try:
+        papers = fetch_papers(
+            effective_token,
+            limit=limit,
+            year_from=year_from,
+            year_to=year_to,
+            search=search,
+        )
+    except PermissionError as e:
+        typer.echo(f"auth failed: {e}", err=True)
+        raise typer.Exit(2) from e
+    except RuntimeError as e:
+        typer.echo(f"API error: {e}", err=True)
+        raise typer.Exit(3) from e
+
+    if not papers:
+        typer.echo(
+            "no records returned. Either your library is empty, "
+            "or the search/year filter excluded everything."
+        )
+        return
+
+    write_cached_token(effective_token)
+    n = render_records_table(deck, papers, title=title or "Literature Records")
+    typer.echo(f"wrote {n} record(s) -> {deck}")
+    typer.echo("token cached at ~/.config/unisfigure/token.txt (mode 600)")
 
 
 if __name__ == "__main__":

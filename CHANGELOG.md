@@ -4,6 +4,33 @@ All notable changes to Uni-Scholar Figure are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-07-18
+
+### Added — Uni-Scholar main-site integration
+- **📚 Research Records ribbon button** (10th button): pulls the user's saved
+  literature from `https://uni-scholar.asia/api/literature/papers` and drops
+  them as a table on the current slide. Columns: Title / Authors / Journal /
+  Year / DOI / Catalyst. Windows uses `MSXML2.XMLHTTP`, Mac uses `curl`.
+- Token management: InputBox prompts on first use, cached at
+  `%APPDATA%\UniScholarFigure\token.txt` (Win) /
+  `~/Library/Application Support/UniScholarFigure/token.txt` (Mac).
+  Hold **Shift + click** the button to reset the token.
+- Tiny JSON parser in VBA (`ExtractJsonArray`, `CountJsonObjects`,
+  `SplitJsonObjects`, `CleanJsonArray`) — handles the API response without
+  pulling in a third-party library.
+- **CLI command `unisfig research-records`**: same behavior, plus
+  `--year-from` / `--year-to` / `--search` / `--limit` filters, token cached
+  at `~/.config/unisfigure/token.txt` (mode 600).
+- 3 new tests (offline, mocked records): render with data, empty list,
+  CLI without token.
+
+### Changed
+- Bumped version to `1.3.0` across 8 locations (was 7 — the ribbon button
+  count check is now part of the test surface).
+- Ribbon has 10 buttons (was 9): the 7 features + Generate Demo +
+  Check Updates + Research Records.
+- 23 tests passing (was 20). `ruff check .` still clean.
+
 ## [1.2.4] — 2026-07-17
 
 ### Added

@@ -16,6 +16,7 @@ from unisfigure.gen_table import gen_table_from_text, parse_input  # noqa: E402
 from unisfigure.icons import add_icon_to_slide, list_icons  # noqa: E402
 from unisfigure.layer_stack import render_layer_stack  # noqa: E402
 from unisfigure.matrix_grid import render_matrix  # noqa: E402
+from unisfigure.research_records import render_records_table  # noqa: E402
 from unisfigure.table_images import fill_table_with_images  # noqa: E402
 from unisfigure.trim_png import trim_one  # noqa: E402
 
@@ -34,8 +35,8 @@ def _make_padded_png(path: Path, content_size: int = 80, canvas: int = 200) -> P
 
 
 def test_release_info():
-    assert __version__ == "1.2.4"
-    assert RELEASE_DATE == "2026-07-17"
+    assert __version__ == "1.3.0"
+    assert RELEASE_DATE == "2026-07-18"
 
 
 def test_trim_png(tmp_path):
@@ -190,3 +191,46 @@ def test_add_icon_unknown_name(tmp_path):
     deck = tmp_path / "x.pptx"
     with pytest.raises((KeyError, ValueError)):
         add_icon_to_slide(deck, "nonexistent_icon_xyz")
+
+
+def test_research_records_render(tmp_path):
+    """Render a table from mocked Uni-Scholar paper records."""
+    deck = tmp_path / "lit.pptx"
+    papers = [
+        {
+            "title": "Atomistic simulation of CO2 reduction",
+            "authors": '["Alice Smith","Bob Jones"]',
+            "journal": "Nature Catalysis",
+            "year": 2024,
+            "doi": "10.1038/s41929-024-00001-x",
+            "catalystName": "Cu(111)",
+        },
+        {
+            "title": "Short title",
+            "authors": "Carol Lee",
+            "journal": None,
+            "year": None,
+            "doi": None,
+            "catalystName": None,
+        },
+    ]
+    n = render_records_table(deck, papers, title="Test Library")
+    assert n == 2
+    assert deck.exists() and deck.stat().st_size > 0
+
+
+def test_research_records_empty(tmp_path):
+    """Empty paper list should still write a header-only deck."""
+    deck = tmp_path / "empty.pptx"
+    n = render_records_table(deck, [], title="Empty Library")
+    assert n == 0
+    assert deck.exists() and deck.stat().st_size > 0
+
+
+def test_research_records_cli_missing_token(tmp_path, monkeypatch):
+    """CLI should refuse to run with no token (and no cache)."""
+    monkeypatch.setenv("UNISFIG_TOKEN_FILE", str(tmp_path / "nonexistent-token"))
+    runner = CliRunner()
+    r = runner.invoke(app, ["research-records", "--deck", str(tmp_path / "x.pptx")])
+    # No token provided via prompt → exit code != 0
+    assert r.exit_code != 0

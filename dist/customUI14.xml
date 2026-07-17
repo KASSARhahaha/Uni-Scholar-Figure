@@ -13,6 +13,7 @@
           <button id="btnVersion"    label="About"         size="large" imageMso="Info"             onAction="OnShowVersion"  screentip="Show version + release date" />
           <button id="btnDemo"       label="Generate Demo" size="large" imageMso="BlogHomePage"     onAction="OnGenerateDemo" screentip="Build a 3-slide showcase exercising all features" />
           <button id="btnUpdate"     label="Check Updates"  size="large" imageMso="DownloadAll"     onAction="OnCheckUpdate"  screentip="Check GitHub for a newer release (no telemetry)" />
+          <button id="btnResearch"   label="Research Records" size="large" imageMso="AccessCollections" onAction="OnResearchRecords" screentip="Pull your Uni-Scholar literature records into a PPT table" />
         </group>
       </tab>
     </tabs>

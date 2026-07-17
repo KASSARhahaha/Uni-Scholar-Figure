@@ -3,8 +3,8 @@
 跨平台 UniScholarFigure 1.2 行为复刻版。Windows 装完直接出 ribbon，Mac 多一步手动启用。
 
 ## 版本
-- v1.2.4
-- Release: 2026-07-17
+- v1.3.0
+- Release: 2026-07-18
 
 ## 平台支持矩阵
 
@@ -18,6 +18,7 @@
 | Add Icon | ✅ | ✅ |
 | About | ✅ | ✅ |
 | Check Updates | ✅ MSXML2.XMLHTTP | ✅ curl via MacScript |
+| **Research Records** | ✅ MSXML2.XMLHTTP + JWT | ✅ curl + JWT（需主站登录获取 token） |
 
 ## 预览
 

@@ -3,7 +3,7 @@
 A cross-platform toolkit for scientific figure creation in PowerPoint — available as both a Python CLI (Linux/Mac/Windows) and a VBA PowerPoint add-in (Windows + Mac).
 
 ## Version
-`1.2.4` — release `2026-07-17`
+`1.3.0` — release `2026-07-18`
 
 ## Install (Python CLI)
 

@@ -1,6 +1,6 @@
 [project]
 name = "unisfigure"
-version = "1.2.4"
+version = "1.3.0"
 description = "Clean-room Python CLI reproduction of UniScholarFigure 1.2 PPT plugin behaviors"
 requires-python = ">=3.10"
 dependencies = [

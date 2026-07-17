@@ -18,7 +18,7 @@ if [[ ! -f "UniScholarFigure.bas" ]]; then
 fi
 
 echo ""
-echo "Uni-Scholar Figure v1.2.4 — Mac installer"
+echo "Uni-Scholar Figure v1.3.0 — Mac installer"
 echo "====================================="
 echo ""
 
