@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">UniScholar Figure logo</title>
+  <desc id="desc">A blue scientific workflow diagram inside a white document.</desc>
+  <rect width="512" height="512" rx="104" fill="#0F4D92"/>
+  <path d="M132 88h175l73 73v263H132z" fill="#fff"/>
+  <path d="M307 88v73h73" fill="#C8E8F4"/>
+  <path d="M307 88v73h73" fill="none" stroke="#0F4D92" stroke-linejoin="round" stroke-width="18"/>
+  <circle cx="190" cy="230" r="28" fill="#27A8C9"/>
+  <circle cx="322" cy="230" r="28" fill="#EF9B32"/>
+  <circle cx="256" cy="338" r="28" fill="#42A66A"/>
+  <path d="M218 230h62M209 252l30 54M303 252l-30 54" fill="none" stroke="#0F4D92" stroke-linecap="round" stroke-width="16"/>
+  <path d="m271 216 18 14-18 14m-58 48 19 10-8 20m74-30-19 10 8 20" fill="none" stroke="#0F4D92" stroke-linecap="round" stroke-linejoin="round" stroke-width="10"/>
+</svg>

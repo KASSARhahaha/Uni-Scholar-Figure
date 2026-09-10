@@ -1,9 +1,9 @@
 {
   "name": "unischolar-figure",
-  "version": "0.1.0+codex.20260910084909",
+  "version": "0.1.0+codex.20260910102606",
   "description": "UniScholar Figure: evidence-backed Figure 1 workflow design with FigEdit editable PowerPoint export.",
   "author": {
-    "name": "Local research tools"
+    "name": "KASSARhahaha"
   },
   "license": "MIT",
   "keywords": [
@@ -18,7 +18,7 @@
     "displayName": "UniScholar Figure",
     "shortDescription": "Research, design, draw, and export editable Figure 1 workflows.",
     "longDescription": "Builds an evidence-backed Figure 1 content map, derives an original journal-appropriate visual system from a cited reference, draws the workflow, and uses a bundled FigEdit snapshot to produce editable SVG and PowerPoint outputs with explicit quality gates.",
-    "developerName": "Local research tools",
+    "developerName": "KASSARhahaha",
     "category": "Productivity",
     "capabilities": [
       "Research",

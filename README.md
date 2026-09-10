@@ -1,4 +1,4 @@
-# Uni-Scholar Figure 1.2
+# Uni-Scholar Figure 1.3
 
 A cross-platform toolkit for scientific figure creation in PowerPoint — available as both a Python CLI (Linux/Mac/Windows) and a VBA PowerPoint add-in (Windows + Mac).
 
@@ -47,6 +47,22 @@ codex plugin add unischolar-figure@unischolar-figure
 
 Start a new Codex task after installation so the `unischolar-figure` skill is available.
 
+## Public Codex submission materials
+
+The repository includes the public materials needed to prepare a skills-only
+Codex plugin submission. They are not an approval or a promise of listing;
+publication requires a verified publisher to submit through OpenAI's review
+portal.
+
+- [Submission overview](docs/public-listing/README.md)
+- [Privacy policy](docs/privacy.md)
+- [Terms of use](docs/terms.md)
+- [Support](docs/support.md)
+- [Reviewer test cases](docs/plugin-review-test-cases.md)
+
+The listing uses the publisher identity `KASSARhahaha`, subject to the identity
+verified in the OpenAI Platform submission portal.
+
 ## Layout
 
 ```
@@ -67,7 +83,7 @@ dist/                   # PowerPoint add-in distribution
   install-mac.command   # Mac installer
   uninstall.ps1         # Windows uninstaller
 tests/
-  test_smoke.py         # 8 passing smoke tests
+  test_smoke.py         # 23 passing tests
   samples/              # layers.txt + table.csv for manual trial
 task_plan.md            # planning-with-files tracker
 notes.md                # behavior notes
@@ -76,34 +92,17 @@ notes.md                # behavior notes
 ## Test
 
 ```bash
-pytest tests/ -v   # 20 passed
+pytest tests/ -v   # 23 passed
 ```
 
-## Privacy of the Python CLI and PowerPoint Add-in
+## Privacy and data boundary
 
-**The Python CLI and PowerPoint add-in make zero outbound network connections during normal use.**
-
-- No telemetry, no analytics, no crash reporter beacon.
-- No license-server or 兑换码 / 机器码 check — the add-in is fully offline.
-- No file is uploaded anywhere. Every transformation runs locally on the
-  user's machine (PowerPoint + VBA on Win/Mac, Python + Pillow on CLI).
-- The only feature that *can* touch the network is the optional
-  **Check for Updates** ribbon button (added in v1.2.4), which issues a
-  single GET to `api.github.com/repos/KASSARhahaha/Uni-Scholar-Figure/releases/latest`
-  when the user explicitly clicks it. No version, identifier, or usage
-  data is sent — the response is parsed locally and shown in a MsgBox.
-
-This is a deliberate design choice, and a feature: scientists and
-engineers in air-gapped or restricted-network environments can deploy
-Uni-Scholar Figure without firewall exceptions or DPA review.
-
-## Codex Plugin Data Boundary
-
-The optional Codex plugin has a separate data boundary from the local CLI and add-in.
-It may browse online literature when a user requests research. Its optional AI clean-plate
-route can send a selected source image and prompt to a user-configured third-party image
-backend only after the user approves that route. Review the selected provider's terms before
-using that route with sensitive, unpublished, or regulated material.
+Read the [privacy policy](docs/privacy.md) before using online features or
+submitting sensitive material. Local layout and PowerPoint operations run on
+the user's device. Network access happens only when the user selects an
+online feature: **Check for Updates**, **Research Records**, Codex literature
+research, or an approved image-generation route. The repository does not
+operate a telemetry or analytics service.
 
 ## Out of scope for the Python CLI and PowerPoint Add-in
 - AI image generation (not part of the core v1.2 feature set)
