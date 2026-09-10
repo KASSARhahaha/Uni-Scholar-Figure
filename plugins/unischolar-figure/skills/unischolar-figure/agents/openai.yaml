@@ -1,0 +1,4 @@
+interface:
+  display_name: "UniScholar Figure"
+  short_description: "Research and build editable Figure 1 workflows"
+  default_prompt: "Research my scientific topic, define a defensible Figure 1 workflow, draw an original journal-style figure, and deliver an editable FigEdit PowerPoint."

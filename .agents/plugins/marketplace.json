@@ -1,0 +1,20 @@
+{
+  "name": "unischolar-figure",
+  "interface": {
+    "displayName": "UniScholar Figure"
+  },
+  "plugins": [
+    {
+      "name": "unischolar-figure",
+      "source": {
+        "source": "local",
+        "path": "./plugins/unischolar-figure"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

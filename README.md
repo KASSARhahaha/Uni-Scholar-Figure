@@ -34,6 +34,19 @@ Input formats for `gen-table`: `auto` (default), `csv`, `markdown` (pipe-table),
 
 See `dist/README.md` for one-click install instructions (Windows PowerShell + Mac).
 
+## Codex Plugin
+
+The evidence-backed Figure 1 workflow plugin lives in `plugins/unischolar-figure/`.
+It supports research tracing, original journal-style workflow design, and FigEdit
+export to editable SVG and PowerPoint.
+
+```bash
+codex plugin marketplace add KASSARhahaha/Uni-Scholar-Figure --ref main
+codex plugin add unischolar-figure@unischolar-figure
+```
+
+Start a new Codex task after installation so the `unischolar-figure` skill is available.
+
 ## Layout
 
 ```
@@ -66,9 +79,9 @@ notes.md                # behavior notes
 pytest tests/ -v   # 20 passed
 ```
 
-## Privacy
+## Privacy of the Python CLI and PowerPoint Add-in
 
-**Uni-Scholar Figure makes zero outbound network connections during normal use.**
+**The Python CLI and PowerPoint add-in make zero outbound network connections during normal use.**
 
 - No telemetry, no analytics, no crash reporter beacon.
 - No license-server or 兑换码 / 机器码 check — the add-in is fully offline.
@@ -84,7 +97,15 @@ This is a deliberate design choice, and a feature: scientists and
 engineers in air-gapped or restricted-network environments can deploy
 Uni-Scholar Figure without firewall exceptions or DPA review.
 
-## Out of scope (deliberate)
-- AI image generation (not part of v1.2 feature set)
+## Codex Plugin Data Boundary
+
+The optional Codex plugin has a separate data boundary from the local CLI and add-in.
+It may browse online literature when a user requests research. Its optional AI clean-plate
+route can send a selected source image and prompt to a user-configured third-party image
+backend only after the user approves that route. Review the selected provider's terms before
+using that route with sensitive, unpublished, or regulated material.
+
+## Out of scope for the Python CLI and PowerPoint Add-in
+- AI image generation (not part of the core v1.2 feature set)
 - Licensing / 兑换码 / 机器码 flow
 - Decompiling or shipping any byte of third-party binaries

@@ -1,0 +1,763 @@
+#!/usr/bin/env python3
+"""Quality audit helpers for FigEdit Background Aware outputs."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import Any
+
+
+def _parse_xml(path: Path) -> tuple[bool, str]:
+    try:
+        ET.parse(path)
+        return True, "ok"
+    except Exception as exc:
+        return False, repr(exc)
+
+
+def _find_chrome() -> Path | None:
+    candidates = [
+        Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
+        Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
+        Path(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
+        Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    found = shutil.which("chrome") or shutil.which("msedge") or shutil.which("chromium")
+    return Path(found) if found else None
+
+
+def _num(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _status(status: str, **extra: Any) -> dict[str, Any]:
+    return {"status": status, **extra}
+
+
+def render_preview(svg_path: Path, preview_path: Path, width: int, height: int) -> dict[str, Any]:
+    chrome = _find_chrome()
+    if not chrome:
+        return {"status": "skipped", "reason": "Chrome/Edge executable not found"}
+    preview_path.parent.mkdir(parents=True, exist_ok=True)
+    url = svg_path.resolve().as_uri()
+    cmd = [
+        str(chrome),
+        "--headless=new",
+        "--disable-gpu",
+        "--hide-scrollbars",
+        f"--window-size={int(width)},{int(height)}",
+        f"--screenshot={str(preview_path)}",
+        url,
+    ]
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=90)
+    return {
+        "status": "ok" if proc.returncode == 0 and preview_path.exists() else "failed",
+        "renderer": str(chrome),
+        "returncode": proc.returncode,
+        "output": proc.stdout[-1000:],
+    }
+
+
+def _is_ai_clean_plate(manifest: dict[str, Any]) -> bool:
+    return bool(_background_plans(manifest))
+
+
+def _background_plans(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    plans = manifest.get("background_plans")
+    if isinstance(plans, list):
+        return [plan for plan in plans if isinstance(plan, dict) and plan.get("strategy") == "ai-clean-plate"]
+    legacy = manifest.get("background_plan")
+    if isinstance(legacy, dict) and legacy.get("strategy") == "ai-clean-plate":
+        return [legacy]
+    return []
+
+
+def _canvas_area(manifest: dict[str, Any]) -> float:
+    canvas = manifest.get("canvas", {})
+    return max(1.0, _num(canvas.get("width"), 1.0) * _num(canvas.get("height"), 1.0))
+
+
+def _is_source_crop(asset: dict[str, Any], plate_ids: set[str]) -> bool:
+    if asset.get("id") in plate_ids or asset.get("kind") == "background-plate":
+        return False
+    source_mode = str(asset.get("source_mode", "")).lower()
+    decision = str(asset.get("decision", "")).lower()
+    return bool(asset.get("source_region")) or source_mode == "source-crop" or decision in {"crop", "source-preserve"}
+
+
+def _ai_patchwork_gate(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Catch the failure mode where an AI plate is covered by dirty source blocks."""
+
+    if not _is_ai_clean_plate(manifest):
+        return _status("ok", reason="no AI clean plate")
+
+    plans = _background_plans(manifest)
+    plate_ids = {str(plan.get("plate_asset_id")) for plan in plans if plan.get("plate_asset_id")}
+    canvas = manifest.get("canvas", {})
+    regions = []
+    for plan in plans:
+        region = plan.get("source_region")
+        if not isinstance(region, dict):
+            region = {"x": 0, "y": 0, "w": canvas.get("width"), "h": canvas.get("height")}
+        regions.append(region)
+    area = sum(max(1.0, _num(region.get("w")) * _num(region.get("h"))) for region in regions) or _canvas_area(manifest)
+    crops = []
+    crop_overlap_area: dict[str, float] = {}
+    for asset in manifest.get("assets", []):
+        if not _is_source_crop(asset, plate_ids):
+            continue
+        ax1, ay1 = _num(asset.get("x")), _num(asset.get("y"))
+        ax2, ay2 = ax1 + _num(asset.get("w")), ay1 + _num(asset.get("h"))
+        overlap = 0.0
+        for region in regions:
+            rx1, ry1 = _num(region.get("x")), _num(region.get("y"))
+            rx2, ry2 = rx1 + _num(region.get("w")), ry1 + _num(region.get("h"))
+            overlap += max(0.0, min(ax2, rx2) - max(ax1, rx1)) * max(0.0, min(ay2, ry2) - max(ay1, ry1))
+        if overlap > 0:
+            crops.append(asset)
+            crop_overlap_area[str(asset.get("id"))] = overlap
+    crop_summaries = []
+    large = []
+    total_area = 0.0
+    residue = []
+
+    for asset in crops:
+        asset_area = crop_overlap_area.get(str(asset.get("id")), 0.0)
+        ratio = asset_area / area
+        total_area += asset_area
+        if ratio >= 0.04:
+            large.append(asset)
+        crop_summaries.append({"id": asset.get("id"), "area_ratio": round(ratio, 4)})
+
+        residue_flags = [
+            asset.get("text_residue"),
+            asset.get("old_text_residue"),
+            asset.get("annotation_residue"),
+            asset.get("contains_old_text"),
+            asset.get("contains_foreground_text"),
+        ]
+        crop_status = str(asset.get("crop_status", "")).lower()
+        notes = str(asset.get("review_notes", "") + " " + asset.get("decision_reason", "")).lower()
+        if any(flag is True for flag in residue_flags) or any(token in crop_status for token in ["residue", "dirty", "old-text"]) or "old text" in notes or "annotation residue" in notes:
+            residue.append(asset.get("id"))
+
+    total_ratio = total_area / area
+    if residue:
+        return _status(
+            "failed",
+            message="source crops contain old text or annotation residue",
+            residue_assets=residue,
+        )
+    if len(large) >= 3 or total_ratio >= 0.35:
+        return _status(
+            "failed",
+            message="AI clean-plate output appears to be patchwork source-crop reconstruction",
+            source_crop_count=len(crops),
+            large_source_crop_count=len(large),
+            source_crop_area_ratio=round(total_ratio, 4),
+            crops=crop_summaries[:20],
+        )
+    if large:
+        return _status(
+            "review",
+            message="AI clean-plate output uses large source crops; confirm they are clean, identity-critical assets",
+            source_crop_count=len(crops),
+            large_source_crop_count=len(large),
+            source_crop_area_ratio=round(total_ratio, 4),
+            crops=crop_summaries[:20],
+        )
+    return _status("ok", source_crop_count=len(crops), source_crop_area_ratio=round(total_ratio, 4))
+
+
+def _raw_detector_import_gate(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Flag raw detector/measurement candidates that leaked into the final SVG.
+
+    Detector-agnostic: any tool's raw output imported wholesale into `elements`
+    without model review is the failure, whatever produced the numbers.
+
+    `provenance` is checked first. draft_elements.py stamps every draft it
+    writes and adoption keeps the stamp, so a delivered manifest still
+    carrying draft provenance is one whose drafts were never looked at.
+    Clear the marker (or set review_status) once the composed SVG has been
+    checked."""
+
+    structural_types = {"rect", "line", "path", "polyline", "polygon", "circle", "ellipse"}
+    raw_decisions = {"auto", "raw", "raw-detection", "detector-import", "opencv-import", "cv-import"}
+    draft_provenance = {"draft", "draft-geometry", "draft-ocr"}
+    reviewed = {"verified", "ok", "accepted"}
+    raw = []
+    unreviewed_detector = []
+    unreviewed_drafts = []
+
+    for element in manifest.get("elements", []):
+        provenance = str(element.get("provenance", "")).lower()
+        review = str(element.get("review_status", "")).lower()
+        if provenance in draft_provenance and review not in reviewed:
+            unreviewed_drafts.append(element.get("id"))
+        if element.get("type") not in structural_types:
+            continue
+        detector = " ".join(str(element.get(k, "")) for k in ["detector", "source", "evidence"]).lower()
+        decision = str(element.get("decision", "")).lower()
+        if decision in raw_decisions:
+            raw.append(element.get("id"))
+        if any(token in detector for token in ["opencv", "cv", "hough", "detected_primitives"]) and review not in reviewed:
+            unreviewed_detector.append(element.get("id"))
+
+    if raw:
+        return _status("failed", message="raw detector primitives were imported into final elements", samples=raw[:30])
+    if unreviewed_drafts:
+        return _status(
+            "review",
+            message=(
+                "elements still carry draft provenance; confirm the composed SVG was checked, "
+                "then clear provenance or set review_status"
+            ),
+            count=len(unreviewed_drafts),
+            samples=unreviewed_drafts[:30],
+        )
+    if len(unreviewed_detector) > 20:
+        return _status(
+            "review",
+            message="many detector-sourced primitives lack explicit review; check for detector noise",
+            count=len(unreviewed_detector),
+            samples=unreviewed_detector[:30],
+        )
+    return _status("ok", unreviewed_detector_count=len(unreviewed_detector))
+
+
+def _hex_to_rgb(text: str) -> tuple[int, int, int]:
+    value = text.lstrip("#")
+    if len(value) != 6:
+        return (255, 255, 255)
+    try:
+        return tuple(int(value[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+    except ValueError:
+        return (255, 255, 255)
+
+
+def _crop_window_gate(manifest: dict[str, Any], out_dir: Path) -> dict[str, Any]:
+    """Pixel back-check for the model's Crop Window Check verdicts.
+
+    The verdict itself is a visual judgment made while authoring the manifest
+    (`crop_window`: clean / clean-on-fill / contaminated). This gate only
+    audits it after the fact: for every coordinate-crop asset it inspects the
+    window's border ring (does the window straddle two backings? is the
+    backing the canvas background?) and whether ink touches the window edge
+    (clipped element or intruding neighbor). Contradictions come back as
+    review evidence for the model to re-examine — the gate does not overrule
+    the model, except for the hard case of cropping a declared-contaminated
+    window."""
+
+    crops = [
+        asset
+        for asset in manifest.get("assets", [])
+        if str(asset.get("decision", "")).lower() == "crop" and isinstance(asset.get("source_region"), dict)
+    ]
+    if not crops:
+        return _status("ok", reason="no coordinate-crop assets")
+
+    try:
+        import numpy as np
+        from PIL import Image
+
+        source = Path(str(manifest.get("source_image") or ""))
+        if not source.exists():
+            found = sorted((out_dir / "assets").glob("source.*"))
+            source = found[0] if found else None
+        if source is None:
+            return _status("skipped", reason="source image not found")
+        arr = np.asarray(Image.open(source).convert("RGB"), dtype=np.int64)
+    except Exception as exc:
+        return _status("skipped", reason=repr(exc))
+
+    background = _hex_to_rgb(str(((manifest.get("canvas") or {}).get("background")) or "#ffffff"))
+    height, width = arr.shape[:2]
+    failed = []
+    review = []
+
+    for asset in crops:
+        region = asset["source_region"]
+        try:
+            x, y = int(_num(region.get("x"))), int(_num(region.get("y")))
+            w, h = int(_num(region.get("w"))), int(_num(region.get("h")))
+        except Exception:
+            continue
+        if w <= 4 or h <= 4:
+            continue
+        declared = str(asset.get("crop_window", "")).lower() or None
+
+        if declared == "contaminated":
+            failed.append({"id": asset.get("id"), "reason": "crop_window is contaminated but decision is still crop; the window contains foreground or backing pixels that are not the element"})
+            continue
+
+        band = 3
+        rx1, ry1 = max(0, x - band), max(0, y - band)
+        rx2, ry2 = min(width, x + w + band), min(height, y + h + band)
+        ring_parts = []
+        if ry1 < y:
+            ring_parts.append(arr[ry1:y, rx1:rx2].reshape(-1, 3))
+        if y + h < ry2:
+            ring_parts.append(arr[y + h : ry2, rx1:rx2].reshape(-1, 3))
+        if rx1 < x:
+            ring_parts.append(arr[max(0, y) : min(height, y + h), rx1:x].reshape(-1, 3))
+        if x + w < rx2:
+            ring_parts.append(arr[max(0, y) : min(height, y + h), x + w : rx2].reshape(-1, 3))
+        if not ring_parts:
+            continue
+        try:
+            import numpy as np
+
+            ring = np.concatenate(ring_parts)
+            quantized = (ring // 16) * 16
+            colors, counts = np.unique(quantized, axis=0, return_counts=True)
+            mode_index = int(np.argmax(counts))
+            in_bucket = (quantized == colors[mode_index]).all(axis=1)
+            # Mean of the actual pixels in the dominant bucket, not the
+            # quantized bucket value — light card fills sit only ~25 units
+            # from white, so bucket-value precision loss would hide them.
+            mode_rgb = ring[in_bucket].mean(axis=0)
+            dominant_share = float(counts[mode_index]) / float(len(quantized))
+            bg_dist = float(np.sqrt(((mode_rgb - np.array(background, dtype=float)) ** 2).sum()))
+
+            window = arr[max(0, y) : min(height, y + h), max(0, x) : min(width, x + w)]
+            ink = np.sqrt(((window.astype(float) - mode_rgb.astype(float)) ** 2).sum(axis=2)) > 40.0
+            edge_touch = bool(ink[0, :].any() or ink[-1, :].any() or ink[:, 0].any() or ink[:, -1].any())
+            ys, xs = np.where(ink)
+            candidate = None
+            if len(xs):
+                # Advisory only: retain a two-pixel backing margin around ink.
+                # Ignore tiny reductions that would only create review noise.
+                tx1 = max(0, int(xs.min()) - 2)
+                ty1 = max(0, int(ys.min()) - 2)
+                tx2 = min(window.shape[1], int(xs.max()) + 3)
+                ty2 = min(window.shape[0], int(ys.max()) + 3)
+                new_w, new_h = tx2 - tx1, ty2 - ty1
+                old_area, new_area = w * h, new_w * new_h
+                if new_w > 0 and new_h > 0 and (w - new_w >= 4 or h - new_h >= 4) and new_area <= old_area * 0.92:
+                    candidate = {"x": x + tx1, "y": y + ty1, "w": new_w, "h": new_h}
+        except Exception:
+            continue
+
+        evidence = {
+            "id": asset.get("id"),
+            "declared": declared,
+            "ring_dominant": "#{:02x}{:02x}{:02x}".format(*[int(v) for v in mode_rgb]),
+            "ring_dominant_share": round(dominant_share, 3),
+            "ink_touches_edge": edge_touch,
+            "candidate_tighter_window": candidate,
+            "candidate_note": "advisory only; confirm against the whole source before changing the crop",
+        }
+        if dominant_share < 0.90:
+            evidence["reason"] = "window border ring straddles more than one backing color; likely mid-layer or neighbor contamination"
+            review.append(evidence)
+        elif bg_dist > 12.0 and declared in {None, "clean"}:
+            evidence["reason"] = "backing is a uniform non-background fill; declare crop_window clean-on-fill and redraw the backing with this exact fill"
+            review.append(evidence)
+        elif edge_touch and declared in {None, "clean", "clean-on-fill"}:
+            evidence["reason"] = "ink touches the crop window edge; the window may clip the element or include an intruding neighbor"
+            review.append(evidence)
+
+    if failed:
+        return _status("failed", message="assets with a contaminated crop window are still coordinate-cropped", samples=failed[:30])
+    if review:
+        return _status(
+            "review",
+            message="pixel evidence contradicts the declared crop_window verdicts; re-examine these windows against the source",
+            count=len(review),
+            samples=review[:30],
+        )
+    return _status("ok", checked=len(crops))
+
+
+def _ocr_fallback_gate(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Flag OCR fallback text that has not been model-verified."""
+
+    fallback = []
+    low_conf_unverified = []
+    unreviewed_ocr = []
+
+    for element in manifest.get("elements", []):
+        if element.get("type") != "text":
+            continue
+        joined = " ".join(str(element.get(k, "")) for k in ["decision", "source", "detector", "review_status"]).lower()
+        review = str(element.get("review_status", "")).lower()
+        confidence = element.get("confidence")
+        if "ocr-fallback" in joined or "fallback-ocr" in joined:
+            fallback.append(element.get("id"))
+        if confidence is not None and _num(confidence, 1.0) < 0.65 and review not in {"verified", "ok", "accepted"}:
+            low_conf_unverified.append(element.get("id"))
+        if "ocr" in joined and review not in {"verified", "ok", "accepted", "manual-verified"}:
+            unreviewed_ocr.append(element.get("id"))
+
+    if fallback:
+        return _status("failed", message="OCR fallback text reached final elements", samples=fallback[:30])
+    if len(low_conf_unverified) > 0:
+        return _status(
+            "review",
+            message="low-confidence OCR text requires manual verification",
+            count=len(low_conf_unverified),
+            samples=low_conf_unverified[:30],
+        )
+    if len(unreviewed_ocr) > 30:
+        return _status(
+            "review",
+            message="many OCR-sourced text elements lack explicit review",
+            count=len(unreviewed_ocr),
+            samples=unreviewed_ocr[:30],
+        )
+    return _status("ok", unreviewed_ocr_count=len(unreviewed_ocr))
+
+
+def _text_math_layout_gate(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Trigger native review only for PowerPoint-specific structural risk.
+
+    Visual density by itself is not a reason to render PowerPoint. Static
+    text-fit analysis runs in the PPTX stage; this gate carries only the
+    manifest's explicit validation tier and the hard Office Math trigger.
+    """
+
+    elements = manifest.get("elements", [])
+    text_elements = [el for el in elements if el.get("type") == "text"]
+    math_elements = [el for el in elements if el.get("type") in {"math", "formula"}]
+    unconstrained_math = [
+        el.get("id")
+        for el in math_elements
+        if not el.get("source_region")
+        or not el.get("w")
+        or not el.get("h")
+        or not (el.get("layout_lock") or el.get("baseline_y") or el.get("dominant_baseline"))
+    ]
+
+    review = manifest.get("pptx_visual_review") or (manifest.get("quality_gates") or {}).get("pptx_visual_review")
+    review_ok = isinstance(review, dict) and str(review.get("status", "")).lower() in {"ok", "verified", "passed"}
+    route_tier = str(
+        ((manifest.get("reconstruction_plan") or manifest.get("route_decision")) or {}).get("validation_tier", "")
+    ).lower()
+
+    if review_ok:
+        return _status(
+            "ok",
+            text_count=len(text_elements),
+            math_count=len(math_elements),
+            pptx_visual_review="ok",
+        )
+    if math_elements or route_tier == "pptx-triggered":
+        return _status(
+            "review",
+            message="PowerPoint-specific structural risk requires one native review",
+            text_count=len(text_elements),
+            math_count=len(math_elements),
+            unconstrained_math_count=len(unconstrained_math),
+            route_validation_tier=route_tier or None,
+            samples=unconstrained_math[:30],
+        )
+    return _status(
+        "ok",
+        reason="no Office Math or explicit pptx-triggered route; static text-fit report decides whether to escalate",
+        text_count=len(text_elements),
+        math_count=len(math_elements),
+    )
+
+
+def _background_plate_gate(manifest: dict[str, Any]) -> dict[str, Any]:
+    if not _is_ai_clean_plate(manifest):
+        return _status("ok", reason="conventional route")
+
+    assets = {asset.get("id"): asset for asset in manifest.get("assets", []) if isinstance(asset, dict)}
+    failures = []
+    for plan in _background_plans(manifest):
+        scope_id = plan.get("scope_id") or "legacy-full-canvas"
+        plate = assets.get(plan.get("plate_asset_id"))
+        provenance = plan.get("generation_provenance") or {}
+        review = plan.get("candidate_review") or {}
+        if not isinstance(plate, dict):
+            failures.append({"scope_id": scope_id, "reason": "plate asset is missing"})
+            continue
+        if plate.get("kind") != "background-plate":
+            failures.append({"scope_id": scope_id, "reason": "plate asset should use kind=background-plate"})
+        if not provenance.get("output"):
+            failures.append({"scope_id": scope_id, "reason": "generation provenance output is missing"})
+        if review.get("accepted") is not True:
+            failures.append({"scope_id": scope_id, "reason": "candidate was not accepted"})
+        target = plan.get("source_region")
+        if not isinstance(target, dict):
+            canvas = manifest.get("canvas", {})
+            target = {"x": 0, "y": 0, "w": canvas.get("width"), "h": canvas.get("height")}
+        aligned = all(abs(_num(plate.get(key)) - _num(target.get(key))) <= 1.0 for key in ("x", "y", "w", "h"))
+        if not aligned:
+            failures.append({"scope_id": scope_id, "reason": "plate placement does not align to its source region"})
+    if failures:
+        return _status("failed", message="one or more AI clean-plate regions are invalid", samples=failures[:20])
+    return _status("ok", region_count=len(_background_plans(manifest)))
+
+
+def _background_route_consistency_gate(manifest: dict[str, Any]) -> dict[str, Any]:
+    plan = manifest.get("reconstruction_plan")
+    if isinstance(plan, dict):
+        if plan.get("open_questions"):
+            return _status(
+                "failed",
+                message="reconstruction plan has open user questions; stop before reconstruction",
+                open_questions=plan.get("open_questions"),
+            )
+        regions = [region for region in plan.get("background_regions", []) if isinstance(region, dict)]
+        plans = _background_plans(manifest)
+        planned = {bg_plan.get("scope_id") for bg_plan in plans}
+        failures = []
+        for region in regions:
+            region_id = region.get("id")
+            if region.get("strategy") == "ai-clean-plate" and region_id not in planned:
+                failures.append({"scope_id": region_id, "reason": "AI region has no accepted background plan"})
+            if region.get("foreground_mode") == "pending-user-choice":
+                failures.append({"scope_id": region_id, "reason": "foreground editability is still pending"})
+        for asset in manifest.get("assets", []):
+            if not isinstance(asset, dict):
+                continue
+            if str(asset.get("decision", "")).lower() == "crop" and str(asset.get("crop_window", "")).lower() == "contaminated":
+                failures.append({"asset_id": asset.get("id"), "reason": "contaminated asset was still cropped"})
+        if failures:
+            return _status("failed", message="execution contradicts the reconstruction plan", samples=failures[:30])
+        return _status("ok", background_region_count=len(regions), ai_region_count=len(plans))
+
+    route = manifest.get("route_decision") or {}
+    if isinstance(route, dict) and route.get("schema_version") == 2:
+        if route.get("route_status") != "ready":
+            return _status(
+                "failed",
+                message="route has unresolved user decisions; stop before reconstruction",
+                route_status=route.get("route_status"),
+                unresolved_decisions=route.get("unresolved_decisions") or [],
+            )
+        scopes = [scope for scope in route.get("background_scopes", []) if isinstance(scope, dict)]
+        plans = _background_plans(manifest)
+        planned = {plan.get("scope_id") for plan in plans}
+        failures = []
+        for scope in scopes:
+            scope_id = scope.get("id")
+            if scope.get("region_accuracy") != "measured":
+                failures.append({"scope_id": scope_id, "reason": "background scope coordinates are still estimated"})
+            if scope.get("strategy") == "ai-clean-plate" and scope_id not in planned:
+                failures.append({"scope_id": scope_id, "reason": "AI scope has no accepted background plan"})
+            if (
+                scope.get("strategy") == "source-preserve-region"
+                and scope.get("field_type") == "continuous-field"
+                and not scope.get("user_directive")
+            ):
+                failures.append({"scope_id": scope_id, "reason": "continuous-field raster preserve lacks explicit user directive"})
+            if scope.get("foreground_mode") == "pending-user-choice":
+                failures.append({"scope_id": scope_id, "reason": "foreground editability is still pending"})
+
+        assets = {asset.get("id"): asset for asset in manifest.get("assets", []) if isinstance(asset, dict)}
+        for group in route.get("asset_groups", []):
+            if not isinstance(group, dict):
+                continue
+            strategy = group.get("strategy")
+            separability = group.get("separability")
+            if strategy == "crop" and separability not in {"clean", "clean-on-fill"}:
+                failures.append({"group": group.get("ids"), "reason": "crop group lacks a clean separability verdict"})
+            if strategy == "regenerate-chroma" and separability != "contaminated":
+                failures.append({"group": group.get("ids"), "reason": "regeneration group lacks a contaminated verdict"})
+            for asset_id in group.get("ids", []):
+                asset = assets.get(asset_id)
+                if not isinstance(asset, dict):
+                    continue
+                decision = str(asset.get("decision", "")).lower()
+                if strategy == "crop" and (decision != "crop" or asset.get("crop_window") not in {"clean", "clean-on-fill"}):
+                    failures.append({"asset_id": asset_id, "reason": "crop route lacks a clean crop window"})
+                elif strategy == "crop" and asset.get("crop_window") != separability:
+                    failures.append({"asset_id": asset_id, "reason": "crop window contradicts route separability"})
+                elif strategy == "regenerate-chroma" and decision != "regenerate-chroma":
+                    failures.append({"asset_id": asset_id, "reason": "regenerate-chroma route was not executed"})
+        for asset in assets.values():
+            if str(asset.get("decision", "")).lower() == "crop" and str(asset.get("crop_window", "")).lower() == "contaminated":
+                failures.append({"asset_id": asset.get("id"), "reason": "contaminated asset was still cropped"})
+        if failures:
+            return _status("failed", message="route v2 execution contradicts the global decision", samples=failures[:30])
+        return _status("ok", background_scope_count=len(scopes), ai_scope_count=len(plans))
+
+    classification = manifest.get("classification") or {}
+    style = str(classification.get("style_type", "")).lower()
+    intent = str(classification.get("reconstruction_intent", "")).lower()
+    mode = str(classification.get("reconstruction_mode", "")).lower()
+    has_plan = bool(manifest.get("background_plan"))
+
+    ai_declared = (
+        style == "continuous-visual-field"
+        or intent == "clean-plate-plus-editable-overlay"
+        or mode == "e-ai"
+    )
+    if ai_declared and not has_plan:
+        return _status(
+            "review",
+            message="classification suggests an AI clean-plate route, but background_plan is missing",
+            style_type=style,
+            reconstruction_intent=intent,
+            reconstruction_mode=mode,
+        )
+    if has_plan and not _is_ai_clean_plate(manifest):
+        return _status("failed", message="background_plan is present but strategy is not ai-clean-plate")
+    return _status("ok")
+
+
+def audit_output(out_dir: Path) -> dict[str, Any]:
+    manifest_path = out_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    canvas = manifest.get("canvas", {})
+    width = int(canvas.get("width", 1200) or 1200)
+    height = int(canvas.get("height", 800) or 800)
+
+    editable_ok, editable_msg = _parse_xml(out_dir / "editable.svg")
+    embedded_ok, embedded_msg = _parse_xml(out_dir / "editable_embedded.svg")
+    preview = render_preview(out_dir / "editable.svg", out_dir / "preview.png", width, height)
+
+    assets = manifest.get("assets", [])
+    elements = manifest.get("elements", [])
+    low_conf = [el for el in elements if el.get("review_status") in {"low-confidence", "needs-check"}]
+    crop_issues = [a for a in assets if a.get("crop_status") not in {None, "verified", "ok"} or (a.get("edge_check") or {}).get("status") not in {None, "ok"}]
+
+    gates = {
+        "xml_editable": {"status": "ok" if editable_ok else "failed", "message": editable_msg},
+        "xml_embedded": {"status": "ok" if embedded_ok else "failed", "message": embedded_msg},
+        "preview_render": preview,
+        "low_confidence_elements": {"status": "review" if low_conf else "ok", "count": len(low_conf)},
+        "crop_edge_checks": {"status": "review" if crop_issues else "ok", "count": len(crop_issues)},
+        "background_route_consistency": _background_route_consistency_gate(manifest),
+        "background_plate": _background_plate_gate(manifest),
+        "ai_patchwork_source_crops": _ai_patchwork_gate(manifest),
+        "crop_window_consistency": _crop_window_gate(manifest, out_dir),
+        "raw_detector_import": _raw_detector_import_gate(manifest),
+        "ocr_fallback_text": _ocr_fallback_gate(manifest),
+        "text_math_layout_fidelity": _text_math_layout_gate(manifest),
+    }
+    return gates
+
+
+def write_quality_report(out_dir: Path, gates: dict[str, Any]) -> None:
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    ocr = json.loads((out_dir / "ocr_results.json").read_text(encoding="utf-8")) if (out_dir / "ocr_results.json").exists() else {}
+    assets = manifest.get("assets", [])
+    elements = manifest.get("elements", [])
+    editability = (manifest.get("quality_gates") or {}).get("editability", {})
+    pptx_math = gates.get("pptx_math_export") or (manifest.get("quality_gates") or {}).get("pptx_math_export", {})
+    formula_leaks = editability.get("formula_text_leak_samples", [])
+    low_conf = [el for el in elements if el.get("review_status") in {"low-confidence", "needs-check"}]
+    crop_issues = [a for a in assets if a.get("crop_status") not in {None, "verified", "ok"} or (a.get("edge_check") or {}).get("status") not in {None, "ok"}]
+    background_plans = _background_plans(manifest)
+
+    lines = [
+        "# Reconstruction Quality Report",
+        "",
+        "## Summary",
+        "",
+        f"- Project: {manifest.get('project')}",
+        f"- Source image: {manifest.get('source_image')}",
+        f"- Canvas: {manifest.get('canvas', {}).get('width')} x {manifest.get('canvas', {}).get('height')}",
+        f"- OCR status: {ocr.get('status', 'missing')} ({len(ocr.get('items', []))} text candidates)",
+        f"- Background strategy: {'regional-ai-clean-plate' if background_plans else 'conventional'} ({len(background_plans)} AI region(s))",
+        f"- Assets: {len(assets)}",
+        f"- Elements: {len(elements)}",
+        f"- SVG text elements: {len([e for e in elements if e.get('type') == 'text'])}",
+        f"- SVG math elements: {len([e for e in elements if e.get('type') in {'math','formula'}])}",
+        f"- Formula-like text leaks: {editability.get('formula_text_leak_count', 0)}",
+        f"- PPTX editable formula objects: {pptx_math.get('editable_count', 0)}/{pptx_math.get('attempted_count', 0)}",
+        f"- Structural SVG elements: {len([e for e in elements if e.get('type') in {'rect','line','path','polyline','polygon','circle','ellipse'}])}",
+        "",
+        "## Quality Gates",
+        "",
+    ]
+    for key, value in gates.items():
+        lines.append(f"- {key}: `{value.get('status')}`")
+    if editability:
+        lines.append(f"- editability: `{editability.get('status')}` text_lift_ratio={editability.get('text_lift_ratio')} asset_text_risks={editability.get('asset_text_risk_count')}")
+    lines.extend(["", "## Items Needing Review", ""])
+    editability_ok = editability.get("status") in {None, "ok"}
+    if not low_conf and not crop_issues and editability_ok and all(v.get("status") in {"ok", "skipped"} for v in gates.values()):
+        lines.append("- No high-priority review items detected by automated checks.")
+    if editability.get("status") == "unavailable":
+        lines.append(
+            "- Gate `editability` is `unavailable`: OCR evidence is missing, so text_lift_ratio could not be computed. "
+            "Manually verify that no editable text was baked into raster assets, or restore `ocr_results.json` "
+            "(set `diagnostics.measurement_workspace` in the manifest, or keep the measurement `work/` directory next to it) and rerun."
+        )
+    elif editability.get("status") == "review":
+        lines.append(f"- Gate `editability` needs review: text_lift_ratio={editability.get('text_lift_ratio')} asset_text_risks={editability.get('asset_text_risk_count')} formula_leaks={editability.get('formula_text_leak_count')}")
+    for el in low_conf[:80]:
+        lines.append(f"- Element `{el.get('id')}` needs review: status={el.get('review_status')} confidence={el.get('confidence')}")
+    for asset in crop_issues[:80]:
+        lines.append(f"- Asset `{asset.get('id')}` crop review: {asset.get('edge_check')} status={asset.get('crop_status')}")
+    for key, value in gates.items():
+        if value.get("status") not in {"ok", "skipped"}:
+            if key == "formula_text_leakage":
+                message = f"{value.get('count', 0)} formula-like text element(s)"
+            else:
+                message = value.get("message") or value.get("reason") or value
+            lines.append(f"- Gate `{key}` needs review: {message}")
+            if key == "pptx_math_export":
+                for failure in value.get("failures", [])[:20]:
+                    lines.append(f"- Formula `{failure.get('id')}` not editable: {failure.get('message')}")
+            if key == "formula_text_leakage":
+                for leak in value.get("samples", [])[:20]:
+                    reasons = ", ".join(leak.get("reasons", []))
+                    lines.append(f"- Formula-like text `{leak.get('id')}` should be split or converted: `{leak.get('text')}` reasons={reasons}")
+            samples = value.get("samples") if isinstance(value.get("samples"), list) else []
+            for sample in samples[:20]:
+                lines.append(f"- Gate `{key}` sample: `{sample}`")
+    if formula_leaks and "formula_text_leakage" not in gates:
+        for leak in formula_leaks[:20]:
+            reasons = ", ".join(leak.get("reasons", []))
+            lines.append(f"- Formula-like text `{leak.get('id')}` should be split or converted: `{leak.get('text')}` reasons={reasons}")
+    lines.extend(
+        [
+            "",
+            "## Diagnostics",
+            "",
+            "- `diagnostics/ocr_overlay.png`",
+            "- `diagnostics/placement_overlay.png`",
+            "- `diagnostics/style_overlay.png`",
+            "- `editability_report.md`",
+            "",
+            "## Notes",
+            "",
+            "- Dense maps, heatmaps, screenshots, and charts remain source-preserved raster assets unless explicitly vectorized.",
+            "- AI clean plate is a background repair route, not a foreground patchwork route.",
+            "- Source-specific assets should be cropped only when identity matters and the crop is clean.",
+            "- Low-confidence OCR text should be checked against the source image before publication use.",
+        ]
+    )
+    (out_dir / "quality_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def audit_and_write(out_dir: Path) -> dict[str, Any]:
+    gates = audit_output(out_dir)
+    manifest_path = out_dir / "manifest.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["quality_gates"] = gates
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_quality_report(out_dir, gates)
+    return gates
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("out_dir", type=Path)
+    args = parser.parse_args()
+    gates = audit_and_write(args.out_dir)
+    print(json.dumps(gates, ensure_ascii=False, indent=2))
+    return 0 if all(v.get("status") in {"ok", "skipped", "review"} for v in gates.values()) else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

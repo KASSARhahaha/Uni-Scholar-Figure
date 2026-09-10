@@ -1,0 +1,30 @@
+{
+  "reviewed_on": "2026-09-10",
+  "sources": [
+    {
+      "name": "scipilot-figure-skill",
+      "repository": "https://github.com/Haojae/scipilot-figure-skill",
+      "commit": "43098ddb9e6a6d142218540c114f9ed38922fc42",
+      "license": "MIT",
+      "vendored": false
+    },
+    {
+      "name": "figures4papers",
+      "repository": "https://github.com/ChenLiu-1996/figures4papers",
+      "commit": "3c181f85e82c6f24948fcaaf3be6696102b41d8d",
+      "license": "CC-BY-NC-4.0",
+      "vendored": false
+    },
+    {
+      "name": "figedit",
+      "repository": "https://github.com/giszzt/figedit",
+      "commit": "acc4f5c01506fe10dad99ca755a9612d67de5467",
+      "license": "MIT",
+      "vendored": true,
+      "vendored_path": "skills/figedit-v2",
+      "local_patches": [
+        "Declare python-pptx as a runtime dependency"
+      ]
+    }
+  ]
+}
